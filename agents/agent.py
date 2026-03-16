@@ -1,6 +1,6 @@
 """
 Branch agent runner for TRANSMUTE-SWARM. Uses OpenRouter (OpenAI-compatible API).
-Reads program_<branch_id>.md and shared_context.md, runs the autoresearch loop via bash tool.
+Reads prompts/programs/program_<branch_id>.md and shared_context.md, runs the autoresearch loop via bash tool.
 Supports primary + fallback model from model_config.yaml. Loads OPENROUTER_API_KEY from env or keys.env.
 """
 import argparse
@@ -9,10 +9,12 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import Optional
 
 try:
     from dotenv import load_dotenv
-    load_dotenv(Path(__file__).resolve().parent / "keys.env")
+    # Keys live at the TRANSMUTE-SWARM root, one level up from this agents/ module
+    load_dotenv(Path(__file__).resolve().parents[1] / "keys.env")
 except Exception:
     pass
 
@@ -24,7 +26,7 @@ TOOL_DEF = {
     "type": "function",
     "function": {
         "name": "bash",
-        "description": "Execute a bash command in the repo root. Use this to modify files, run the oracle, git commit/reset, and read results. Always run from the repository root directory.",
+        "description": "Execute a bash command in the repo root. Use run_experiment.sh for edits+evaluation. Always run from the repository root directory.",
         "parameters": {
             "type": "object",
             "properties": {"command": {"type": "string"}},
@@ -46,8 +48,55 @@ def get_model_config(root: Path) -> dict:
     }
 
 
+READ_ONLY_PREFIXES = (
+    "rg",
+    "ls",
+    "cat",
+    "sed -n",
+    "head",
+    "tail",
+    "pwd",
+    "grep",
+    "git status",
+    "git rev-parse",
+)
+
+
+def _is_read_only(command: str) -> bool:
+    cmd = command.strip()
+    if not cmd:
+        return True
+    lowered = cmd.lower()
+    if any(tok in lowered for tok in ["sed -i", "perl -i", "cat >", ">>", ">", "tee "]):
+        return False
+    if any(sep in cmd for sep in ["&&", ";", "|"]):
+        return False
+    return any(lowered.startswith(prefix) for prefix in READ_ONLY_PREFIXES)
+
+
+def _policy_violation(command: str) -> Optional[str]:
+    cmd = command.strip()
+    if not cmd:
+        return None
+    lowered = cmd.lower()
+    if "evaluate.py" in lowered or "append_tsv.py" in lowered:
+        return "Policy: oracle and TSV writes must be via run_experiment.sh."
+    if "git commit" in lowered or "git reset" in lowered or "git checkout" in lowered:
+        return "Policy: git operations are handled by run_experiment.sh."
+    if ("results_" in lowered or "results/" in lowered) and any(tok in cmd for tok in [">", ">>", "tee"]):
+        return "Policy: do not write results files directly; use run_experiment.sh."
+    if "run_experiment.sh" in lowered:
+        return None
+    if not _is_read_only(cmd):
+        return "Policy: only read-only commands are allowed outside run_experiment.sh. Bundle edits with run_experiment.sh."
+    return None
+
+
 def run_bash(cwd: Path, command: str) -> str:
     """Run command in cwd; return combined stdout and stderr (truncated if huge)."""
+    violation = _policy_violation(command)
+    if violation:
+        return f"POLICY BLOCK: {violation}"
     try:
         r = subprocess.run(
             command,
@@ -76,9 +125,10 @@ def main():
     parser.add_argument("--run_tag", default="poc_001", help="Run tag for branch naming")
     args = parser.parse_args()
 
-    root = Path(__file__).resolve().parent
+    # Use TRANSMUTE-SWARM root (parent of agents/) as the working root
+    root = Path(__file__).resolve().parents[1]
     branch_id = args.branch_id
-    program_path = root / f"program_{branch_id}.md"
+    program_path = root / "prompts" / "programs" / f"program_{branch_id}.md"
     shared_path = root / "discoveries" / "shared_context.md"
 
     if not program_path.exists():
@@ -97,10 +147,10 @@ def main():
 {shared_text}
 
 ## Constraints
-- You have at most {args.iterations} experiment iterations. Each iteration = one attempt to modify code, run the oracle, and keep or discard.
-- Use the bash tool for EVERY action: read files, edit files (e.g. with sed or by writing content), run the oracle, git commit, git reset, grep results, append to results TSV.
+- You have at most {args.iterations} experiment iterations. Each iteration = one attempt to modify code and run `run_experiment.sh`.
+- Use the bash tool for EVERY action.
+- All edits/evaluation must be done via `bash run_experiment.sh ...` (single combined command). Do NOT call `evaluate.py`, `git commit/reset/checkout`, or write results TSVs directly.
 - You modify ONLY the file(s) your program says you own. Do not modify evaluate.py, evaluate_composite.py, or the other branch's solution file.
-- After each experiment, either keep the commit (if metric improved) or run `git reset --hard HEAD~1` to discard.
 - When you have completed the requested number of iterations (or cannot improve further), reply with a single message: DONE. Summarize best metric achieved and key changes.
 - Do not ask the user for permission. Act autonomously until DONE or iteration limit."""
 
@@ -117,10 +167,10 @@ def main():
 
     messages = [
         {"role": "system", "content": system_content},
-        {"role": "user", "content": f"Begin the experiment loop for branch {branch_id}. Run the baseline first (no code change), then iterate up to {args.iterations} times. Use only the bash tool."},
+        {"role": "user", "content": f"Begin the experiment loop for branch {branch_id}. Run the baseline first (no code change), then iterate up to {args.iterations} times. Use only the bash tool and run_experiment.sh."},
     ]
 
-    max_tool_rounds = args.iterations * 15  # enough runway for baseline + several experiments (e.g. search binary search)
+    max_tool_rounds = args.iterations * 2 + 4  # tight runway to encourage single-call iterations
     tool_rounds = 0
 
     while True:

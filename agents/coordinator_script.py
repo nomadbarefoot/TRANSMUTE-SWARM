@@ -3,7 +3,7 @@ Phase 1 deterministic coordinator for TRANSMUTE-SWARM.
 Reads results TSVs per branch, finds best commit per branch, cherry-picks to integration branch,
 runs composite oracle, runs ablation, writes coordinator_report_<cycle>.md.
 No LLM. Human runs this after branches complete.
-Expects results_<branch_id>.tsv in repo root (or --results_dir) with columns: commit, <metric>, memory_gb, status, description.
+Expects results_<branch_id>.tsv under results/ (or --results_dir) with columns: commit, <metric>, memory_gb, status, description.
 """
 import argparse
 import re
@@ -11,6 +11,7 @@ import subprocess
 import sys
 from pathlib import Path
 from datetime import datetime, timezone
+
 
 def run(cwd: Path, *cmd, check: bool = True) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, check=check)
@@ -20,12 +21,13 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--run_tag", default="poc_001")
     parser.add_argument("--branch_ids", nargs="+", default=["sort", "search", "filter"])
-    parser.add_argument("--results_dir", type=Path, default=None, help="Directory containing results_*.tsv (default: repo root)")
+    parser.add_argument("--results_dir", type=Path, default=None, help="Directory containing results_*.tsv (default: TRANSMUTE-SWARM results/)")
     parser.add_argument("--cycle", type=int, default=1)
     args = parser.parse_args()
 
-    root = Path(__file__).resolve().parent
-    results_dir = args.results_dir or root
+    # Use TRANSMUTE-SWARM root (parent of agents/) as the working root
+    root = Path(__file__).resolve().parents[1]
+    results_dir = args.results_dir or (root / "results")
     run_tag = args.run_tag
     branch_ids = args.branch_ids
     cycle = args.cycle
@@ -99,8 +101,8 @@ def main():
                 print(f"WARNING: cherry-pick {commit} (branch {bid}) failed; skipping.", file=sys.stderr)
                 continue
 
-        # 3. Run composite oracle
-        r = run(root, sys.executable, str(root / "evaluate_composite.py"), check=False)
+        # 3. Run composite oracle (now lives under oracles/)
+        r = run(root, sys.executable, str(root / "oracles" / "evaluate_composite.py"), check=False)
         if r.returncode != 0:
             composite_before_abl = None
             print("WARNING: composite oracle failed.", file=sys.stderr)
@@ -130,7 +132,7 @@ def main():
                     continue
                 commit, _ = best[bid]
                 run(root, "git", "cherry-pick", commit, check=False)
-            r = run(root, sys.executable, str(root / "evaluate_composite.py"), check=False)
+            r = run(root, sys.executable, str(root / "oracles" / "evaluate_composite.py"), check=False)
             composite_without = None
             if r.returncode == 0:
                 for line in r.stdout.splitlines():
@@ -149,7 +151,7 @@ def main():
             run(root, "git", "checkout", int_branch, check=False)
             run(root, "git", "branch", "-D", "_abl_temp", check=False)
 
-    # 5. Write report
+    # 5. Write report (into TRANSMUTE-SWARM root; later docs step will move/rename if desired)
     report_path = root / f"coordinator_report_{cycle}.md"
     lines = [
         f"# Coordinator Report — Cycle {cycle}, Run: {run_tag}",

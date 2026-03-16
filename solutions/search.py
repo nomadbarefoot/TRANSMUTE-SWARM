@@ -1,15 +1,19 @@
 """
 Search solution — branch 'search' owns this file only.
-Wonky baseline: linear scan with no early exit — always walks the full list.
-Improvement path: add early exit when arr[i] > target -> then try binary search.
+Binary search implementation for sorted arrays.
 Contract: must define search(arr, target) returning index of target in sorted arr, or -1.
 """
 
 
 def search(arr: list, target: int) -> int:
-    """Wonky linear: no early exit. Always scans entire list then returns. O(n) with 2x comparisons."""
-    found = -1
-    for i in range(len(arr)):
-        if arr[i] == target:
-            found = i
-    return found
+    """Binary search for sorted array."""
+    left, right = 0, len(arr) - 1
+    while left <= right:
+        mid = (left + right) // 2
+        if arr[mid] == target:
+            return mid
+        elif arr[mid] < target:
+            left = mid + 1
+        else:
+            right = mid - 1
+    return -1

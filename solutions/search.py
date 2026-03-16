@@ -1,15 +1,15 @@
 """
 Search solution — branch 'search' owns this file only.
-Deliberately bad: linear search O(n) on sorted list. Agent improves this.
+Wonky baseline: linear scan with no early exit — always walks the full list.
+Improvement path: add early exit when arr[i] > target -> then try binary search.
 Contract: must define search(arr, target) returning index of target in sorted arr, or -1.
 """
 
 
 def search(arr: list, target: int) -> int:
-    """Linear search: O(n). arr is sorted."""
-    for i, x in enumerate(arr):
-        if x == target:
-            return i
-        if x > target:
-            return -1
-    return -1
+    """Wonky linear: no early exit. Always scans entire list then returns. O(n) with 2x comparisons."""
+    found = -1
+    for i in range(len(arr)):
+        if arr[i] == target:
+            found = i
+    return found

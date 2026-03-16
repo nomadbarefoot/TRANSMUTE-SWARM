@@ -7,9 +7,9 @@ Contract: must define filter_le(arr, threshold) returning list of elements <= th
 
 
 def filter_le(arr: list, threshold: int) -> list:
-    """Wonky: result = result + [x] per element, so O(n^2) due to list concat."""
+    """Single-pass with append: O(n)."""
     result = []
     for x in arr:
         if x <= threshold:
-            result = result + [x]
+            result.append(x)
     return result

@@ -3,7 +3,7 @@ Phase 1 deterministic coordinator for TRANSMUTE-SWARM.
 Reads results TSVs per branch, finds best commit per branch, cherry-picks to integration branch,
 runs composite oracle, runs ablation, writes coordinator_report_<cycle>.md.
 No LLM. Human runs this after branches complete.
-Expects results_<branch_id>.tsv in repo root (or --results_dir) with columns: commit, <metric>, memory_gb, status, description.
+Expects results_<branch_id>.tsv under results/ (or --results_dir) with columns: commit, <metric>, memory_gb, status, description.
 """
 import argparse
 import re
@@ -21,13 +21,13 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--run_tag", default="poc_001")
     parser.add_argument("--branch_ids", nargs="+", default=["sort", "search", "filter"])
-    parser.add_argument("--results_dir", type=Path, default=None, help="Directory containing results_*.tsv (default: TRANSMUTE-SWARM root)")
+    parser.add_argument("--results_dir", type=Path, default=None, help="Directory containing results_*.tsv (default: TRANSMUTE-SWARM results/)")
     parser.add_argument("--cycle", type=int, default=1)
     args = parser.parse_args()
 
     # Use TRANSMUTE-SWARM root (parent of agents/) as the working root
     root = Path(__file__).resolve().parents[1]
-    results_dir = args.results_dir or root
+    results_dir = args.results_dir or (root / "results")
     run_tag = args.run_tag
     branch_ids = args.branch_ids
     cycle = args.cycle
@@ -189,4 +189,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

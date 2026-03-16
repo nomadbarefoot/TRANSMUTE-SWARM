@@ -1,10 +1,11 @@
 """
 Fixed oracle harness for TRANSMUTE-SWARM PoC. Do not modify.
 Tests branch-owned solution modules and outputs a single scalar (time_ms) for the agent loop.
-Usage: python evaluate.py --branch sort|search|filter
+Usage: python evaluate.py --branch sort|search|filter [--mode quick|full]
 Output: grep-parseable lines (<branch>_time_ms:, input_size:, n_runs:).
 """
 import argparse
+import os
 import random
 import sys
 import timeit
@@ -12,9 +13,22 @@ from pathlib import Path
 
 # Fixed constants for reproducible evaluation (tuned for ~5–15s per run)
 INPUT_SIZE = 5_000
-N_RUNS = 50
-TIMER_REPEAT = 3
+FULL_N_RUNS = 50
+FULL_TIMER_REPEAT = 3
+QUICK_N_RUNS = 10
+QUICK_TIMER_REPEAT = 1
 SEED = 42
+
+
+def _get_int_env(name: str, default: int) -> int:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        val = int(raw)
+        return val if val > 0 else default
+    except ValueError:
+        return default
 
 
 def _get_solution_module(branch: str):
@@ -42,7 +56,7 @@ def _get_solution_module(branch: str):
     raise ValueError(f"Unknown branch: {branch}. Use 'sort', 'search', or 'filter'.")
 
 
-def _benchmark_sort():
+def _benchmark_sort(n_runs: int, repeat: int):
     random.seed(SEED)
     mod = _get_solution_module("sort")
     arr = [random.randint(0, 10_000) for _ in range(INPUT_SIZE)]
@@ -50,59 +64,68 @@ def _benchmark_sort():
     def run():
         mod.sort(arr.copy())
 
-    times = timeit.repeat(run, number=N_RUNS, repeat=TIMER_REPEAT)
+    times = timeit.repeat(run, number=n_runs, repeat=repeat)
     time_sec = min(times)  # best of repeats
     time_ms = time_sec * 1000
-    return time_ms, INPUT_SIZE, N_RUNS * TIMER_REPEAT
+    return time_ms, INPUT_SIZE, n_runs * repeat
 
 
-def _benchmark_search():
+def _benchmark_search(n_runs: int, repeat: int):
     random.seed(SEED)
     mod = _get_solution_module("search")
     arr = sorted([random.randint(0, 10_000) for _ in range(INPUT_SIZE)])
-    targets = [random.choice(arr) for _ in range(N_RUNS)]
+    targets = [random.choice(arr) for _ in range(n_runs)]
 
     def run():
         for t in targets:
             mod.search(arr, t)
 
-    times = timeit.repeat(run, number=1, repeat=TIMER_REPEAT)
+    times = timeit.repeat(run, number=1, repeat=repeat)
     time_sec = min(times)
     time_ms = time_sec * 1000
-    return time_ms, INPUT_SIZE, N_RUNS * TIMER_REPEAT
+    return time_ms, INPUT_SIZE, n_runs * repeat
 
 
-def _benchmark_filter():
+def _benchmark_filter(n_runs: int, repeat: int):
     random.seed(SEED)
     mod = _get_solution_module("filter")
     arr = sorted([random.randint(0, 10_000) for _ in range(INPUT_SIZE)])
-    thresholds = [random.randint(0, 10_000) for _ in range(N_RUNS)]
+    thresholds = [random.randint(0, 10_000) for _ in range(n_runs)]
 
     def run():
         for t in thresholds:
             mod.filter_le(arr, t)
 
-    times = timeit.repeat(run, number=1, repeat=TIMER_REPEAT)
+    times = timeit.repeat(run, number=1, repeat=repeat)
     time_sec = min(times)
     time_ms = time_sec * 1000
-    return time_ms, INPUT_SIZE, N_RUNS * TIMER_REPEAT
+    return time_ms, INPUT_SIZE, n_runs * repeat
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--branch", required=True, choices=["sort", "search", "filter"])
+    parser.add_argument("--mode", choices=["quick", "full"], default="full")
     args = parser.parse_args()
     branch = args.branch
+    mode = args.mode
+
+    if mode == "quick":
+        n_runs = _get_int_env("ORACLE_QUICK_N_RUNS", QUICK_N_RUNS)
+        repeat = _get_int_env("ORACLE_QUICK_REPEAT", QUICK_TIMER_REPEAT)
+    else:
+        n_runs = _get_int_env("ORACLE_FULL_N_RUNS", FULL_N_RUNS)
+        repeat = _get_int_env("ORACLE_FULL_REPEAT", FULL_TIMER_REPEAT)
 
     try:
         if branch == "sort":
-            time_ms, input_size, n_runs = _benchmark_sort()
+            time_ms, input_size, n_runs = _benchmark_sort(n_runs, repeat)
             metric_name = "sort_time_ms"
         elif branch == "search":
-            time_ms, input_size, n_runs = _benchmark_search()
+            time_ms, input_size, n_runs = _benchmark_search(n_runs, repeat)
             metric_name = "search_time_ms"
         else:
-            time_ms, input_size, n_runs = _benchmark_filter()
+            time_ms, input_size, n_runs = _benchmark_filter(n_runs, repeat)
             metric_name = "filter_time_ms"
     except Exception as e:
         print(f"FAIL: {e}", file=sys.stderr)
@@ -116,4 +139,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

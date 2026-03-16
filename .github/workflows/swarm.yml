@@ -34,6 +34,8 @@ jobs:
   setup_branches:
     needs: prepare_matrix
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # required to push new swarm branches
     steps:
       - uses: actions/checkout@v4
         with:
@@ -46,7 +48,7 @@ jobs:
             bid=$(echo "$bid" | xargs)
             [ -z "$bid" ] && continue
             git checkout -b "swarm/${RUN_TAG}/${bid}"
-            git push -u origin "swarm/${RUN_TAG}/${bid}" || true
+            git push -u origin "swarm/${RUN_TAG}/${bid}"
             git checkout main
           done
         env:
@@ -55,6 +57,8 @@ jobs:
   branch_research:
     needs: [prepare_matrix, setup_branches]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # required to push agent commits back to swarm branch
     strategy:
       fail-fast: false
       matrix:

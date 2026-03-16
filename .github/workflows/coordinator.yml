@@ -48,16 +48,12 @@ jobs:
           fi
       - name: Download results TSVs from swarm artifacts
         if: steps.vars.outputs.run_id != ''
-        uses: actions/download-artifact@v4
-        with:
-          run-id: ${{ steps.vars.outputs.run_id }}
-        continue-on-error: true
-      - name: Copy TSVs to repo root
-        if: steps.vars.outputs.run_id != ''
         run: |
+          RUN_ID="${{ steps.vars.outputs.run_id }}"
           for bid in $(echo "${{ steps.vars.outputs.branch_ids }}" | tr ',' ' '); do
             bid=$(echo "$bid" | xargs)
             [ -z "$bid" ] && continue
+            gh run download "$RUN_ID" -n "results-${bid}" -D "results-${bid}" 2>/dev/null || true
             if [ -f "results-${bid}/results_${bid}.tsv" ]; then
               cp "results-${bid}/results_${bid}.tsv" .
             fi

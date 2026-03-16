@@ -120,7 +120,7 @@ def main():
         {"role": "user", "content": f"Begin the experiment loop for branch {branch_id}. Run the baseline first (no code change), then iterate up to {args.iterations} times. Use only the bash tool."},
     ]
 
-    max_tool_rounds = args.iterations * 5  # allow multiple tool calls per iteration
+    max_tool_rounds = args.iterations * 8  # allow multiple tool calls per iteration (10 iter -> 80 rounds)
     tool_rounds = 0
 
     while True:

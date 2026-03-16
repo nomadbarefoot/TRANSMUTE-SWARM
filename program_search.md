@@ -27,6 +27,8 @@ Once setup is done, kick off the experimentation.
 
 **The goal is simple: get the lowest search_time_ms.** Lower is better. The oracle runs a fixed benchmark (fixed seed, fixed input size) and reports `search_time_ms`.
 
+**Note:** The baseline may not early-exit or may do extra work. Incremental improvements (e.g. add early exit when arr[i] > target, then try binary search) can yield multiple gains over several experiments.
+
 **Simplicity criterion**: All else being equal, simpler is better. A small improvement that adds ugly complexity is not worth it.
 
 **The first run**: Your very first run should always be to establish the baseline: run the oracle as-is without changing `solutions/search.py`.

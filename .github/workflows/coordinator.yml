@@ -24,7 +24,9 @@ on:
 jobs:
   coordinator:
     runs-on: ubuntu-latest
-    # When triggered by workflow_run, use that run's id and inputs
+    permissions:
+      contents: read
+      actions: read   # required to download artifacts from another run (swarm_run_id)
     steps:
       - uses: actions/checkout@v4
         with:
@@ -48,17 +50,24 @@ jobs:
           fi
       - name: Download results TSVs from swarm artifacts
         if: steps.vars.outputs.run_id != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           RUN_ID="${{ steps.vars.outputs.run_id }}"
           for bid in $(echo "${{ steps.vars.outputs.branch_ids }}" | tr ',' ' '); do
             bid=$(echo "$bid" | xargs)
             [ -z "$bid" ] && continue
-            gh run download "$RUN_ID" -n "results-${bid}" -D "results-${bid}" 2>/dev/null || true
+            gh run download "$RUN_ID" -n "results-${bid}" -D "results-${bid}" || true
             if [ -f "results-${bid}/results_${bid}.tsv" ]; then
               cp "results-${bid}/results_${bid}.tsv" .
             fi
           done
+          echo "TSV files in workspace:"
           ls -la results_*.tsv 2>/dev/null || true
+          if [ ! -f results_sort.tsv ] && [ ! -f results_search.tsv ] && [ ! -f results_filter.tsv ]; then
+            echo "ERROR: No results_*.tsv found after download."
+            exit 1
+          fi
       - name: Collect results TSVs from branches (fallback when no swarm_run_id)
         if: steps.vars.outputs.run_id == ''
         run: |

@@ -7,9 +7,10 @@ Contract: must define search(arr, target) returning index of target in sorted ar
 
 
 def search(arr: list, target: int) -> int:
-    """Wonky linear: no early exit. Always scans entire list then returns. O(n) with 2x comparisons."""
-    found = -1
+    """Linear scan with early exit when arr[i] > target."""
     for i in range(len(arr)):
         if arr[i] == target:
-            found = i
-    return found
+            return i
+        if arr[i] > target:
+            break
+    return -1

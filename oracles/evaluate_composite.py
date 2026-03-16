@@ -16,9 +16,10 @@ FILTER_WEIGHT = 1.0 / 3
 
 def run_oracle(branch: str) -> float:
     """Run evaluate.py for one branch and return time_ms."""
-    root = Path(__file__).resolve().parent
+    # Oracles live under TRANSMUTE-SWARM/oracles/, solutions under TRANSMUTE-SWARM/solutions/
+    root = Path(__file__).resolve().parents[1]
     result = subprocess.run(
-        [sys.executable, str(root / "evaluate.py"), "--branch", branch],
+        [sys.executable, str(root / "oracles" / "evaluate.py"), "--branch", branch],
         capture_output=True,
         text=True,
         cwd=root,
@@ -54,3 +55,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

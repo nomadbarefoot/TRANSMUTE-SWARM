@@ -7,9 +7,5 @@ Contract: must define filter_le(arr, threshold) returning list of elements <= th
 
 
 def filter_le(arr: list, threshold: int) -> list:
-    """Wonky: result = result + [x] per element, so O(n^2) due to list concat."""
-    result = []
-    for x in arr:
-        if x <= threshold:
-            result = result + [x]
-    return result
+    """List comprehension: O(n), potentially faster than loop with append."""
+    return [x for x in arr if x <= threshold]

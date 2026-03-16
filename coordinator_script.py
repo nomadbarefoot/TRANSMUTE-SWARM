@@ -93,7 +93,7 @@ def main():
                 continue
 
         # 3. Run composite oracle
-        r = run(root, sys.executable, str(root / "evaluate_composite.py"), check=False, cwd=root)
+        r = run(root, sys.executable, str(root / "evaluate_composite.py"), check=False)
         if r.returncode != 0:
             composite_before_abl = None
             print("WARNING: composite oracle failed.", file=sys.stderr)
@@ -111,28 +111,34 @@ def main():
         if omit_bid not in best:
             marginal[omit_bid] = None
             continue
-        run(root, "git", "checkout", "main", check=False)
-        run(root, "git", "checkout", "-b", "_abl_temp", check=False)
-        run(root, "git", "branch", "-D", "_abl_temp", check=False)
-        run(root, "git", "checkout", "-b", "_abl_temp")
-        for bid in branch_ids:
-            if bid == omit_bid or bid not in best:
+        try:
+            run(root, "git", "checkout", "main", check=False)
+            run(root, "git", "branch", "-D", "_abl_temp", check=False)
+            r = run(root, "git", "checkout", "-b", "_abl_temp", check=False)
+            if r.returncode != 0:
+                marginal[omit_bid] = None
                 continue
-            commit, _ = best[bid]
-            run(root, "git", "cherry-pick", commit, check=False)
-        r = run(root, sys.executable, str(root / "evaluate_composite.py"), check=False, cwd=root)
-        composite_without = None
-        if r.returncode == 0:
-            for line in r.stdout.splitlines():
-                if line.startswith("composite_ms:"):
-                    composite_without = float(line.split(":", 1)[1].strip())
-                    break
-        run(root, "git", "checkout", int_branch, check=False)
-        run(root, "git", "branch", "-D", "_abl_temp", check=False)
-        if composite_before_abl is not None and composite_without is not None:
-            marginal[omit_bid] = composite_before_abl - composite_without  # positive = branch helped
-        else:
+            for bid in branch_ids:
+                if bid == omit_bid or bid not in best:
+                    continue
+                commit, _ = best[bid]
+                run(root, "git", "cherry-pick", commit, check=False)
+            r = run(root, sys.executable, str(root / "evaluate_composite.py"), check=False)
+            composite_without = None
+            if r.returncode == 0:
+                for line in r.stdout.splitlines():
+                    if line.startswith("composite_ms:"):
+                        composite_without = float(line.split(":", 1)[1].strip())
+                        break
+            if composite_before_abl is not None and composite_without is not None:
+                marginal[omit_bid] = composite_before_abl - composite_without  # positive = branch helped
+            else:
+                marginal[omit_bid] = None
+        except Exception:
             marginal[omit_bid] = None
+        finally:
+            run(root, "git", "checkout", int_branch, check=False)
+            run(root, "git", "branch", "-D", "_abl_temp", check=False)
 
     # 5. Write report
     report_path = root / f"coordinator_report_{cycle}.md"

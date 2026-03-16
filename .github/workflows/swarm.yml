@@ -73,7 +73,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r TRANSMUTE-SWARM/config/requirements.txt
       - name: Configure git for agent commits
         run: |
           git config user.email "swarm-agent@transmute.local"
@@ -82,7 +82,8 @@ jobs:
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
-          python3 agent.py --branch_id ${{ matrix.branch_id }} --iterations ${{ inputs.iterations }} --run_tag ${{ inputs.run_tag }}
+          cd TRANSMUTE-SWARM
+          python3 agents/agent.py --branch_id ${{ matrix.branch_id }} --iterations ${{ inputs.iterations }} --run_tag ${{ inputs.run_tag }}
       - name: Push branch updates
         run: git push origin "swarm/${{ inputs.run_tag }}/${{ matrix.branch_id }}"
         continue-on-error: true

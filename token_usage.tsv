@@ -1,8 +1,0 @@
-timestamp_utc	branch_id	model	prompt_tokens	completion_tokens	total_tokens	tool_rounds
-2026-03-16T11:38:15Z	filter	stepfun/step-3.5-flash:free	5142	53	5195	9
-2026-03-16T11:38:19Z	filter	stepfun/step-3.5-flash:free	5231	47	5278	10
-2026-03-16T11:38:20Z	filter	stepfun/step-3.5-flash:free	5287	63	5350	11
-2026-03-16T11:38:28Z	filter	stepfun/step-3.5-flash:free	5508	60	5568	12
-2026-03-16T11:38:38Z	filter	stepfun/step-3.5-flash:free	5694	642	6336	13
-2026-03-16T11:38:43Z	filter	stepfun/step-3.5-flash:free	5815	275	6090	14
-2026-03-16T11:38:47Z	filter	stepfun/step-3.5-flash:free	5949	86	6035	15

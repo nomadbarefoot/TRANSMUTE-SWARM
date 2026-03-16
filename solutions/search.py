@@ -1,20 +1,14 @@
 """
 Search solution — branch 'search' owns this file only.
-Improvement: binary search (O(log n)).
+Improvement: use bisect module (C implementation) for binary search.
 Contract: must define search(arr, target) returning index of target in sorted arr, or -1.
 """
+from bisect import bisect_left
 
 
 def search(arr: list, target: int) -> int:
-    """Binary search."""
-    lo = 0
-    hi = len(arr) - 1
-    while lo <= hi:
-        mid = (lo + hi) // 2
-        if arr[mid] == target:
-            return mid
-        elif arr[mid] < target:
-            lo = mid + 1
-        else:
-            hi = mid - 1
+    """Binary search using bisect_left."""
+    i = bisect_left(arr, target)
+    if i < len(arr) and arr[i] == target:
+        return i
     return -1

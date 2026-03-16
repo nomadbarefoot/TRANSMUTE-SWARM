@@ -35,9 +35,12 @@ jobs:
         id: vars
         run: |
           if [ "${{ github.event_name }}" = "workflow_run" ]; then
-            echo "run_id=${{ github.event.workflow_run.id }}" >> $GITHUB_OUTPUT
-            echo "run_tag=${{ github.event.workflow_run.inputs.run_tag }}" >> $GITHUB_OUTPUT
-            echo "branch_ids=${{ github.event.workflow_run.inputs.branch_ids }}" >> $GITHUB_OUTPUT
+            RUN_ID="${{ github.event.workflow_run.id }}"
+            echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
+            RUN_TAG=$(gh run view "$RUN_ID" --json inputs -q '.inputs.run_tag // "poc_001"' 2>/dev/null || echo "poc_001")
+            BRANCH_IDS=$(gh run view "$RUN_ID" --json inputs -q '.inputs.branch_ids // "sort,search,filter"' 2>/dev/null || echo "sort,search,filter")
+            echo "run_tag=$RUN_TAG" >> $GITHUB_OUTPUT
+            echo "branch_ids=$BRANCH_IDS" >> $GITHUB_OUTPUT
           else
             echo "run_id=${{ inputs.swarm_run_id }}" >> $GITHUB_OUTPUT
             echo "run_tag=${{ inputs.run_tag }}" >> $GITHUB_OUTPUT

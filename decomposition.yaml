@@ -1,0 +1,25 @@
+# Hand-written PoC decomposition. No transmuter agent yet.
+run_tag: poc_001
+problem: "Optimize Python algorithm runtime (sort + search)"
+
+composite_metric:
+  oracle: "python3 evaluate_composite.py"
+  direction: lower_is_better
+
+branches:
+  - id: sort
+    owns: [solutions/sort.py]
+    metric:
+      name: sort_time_ms
+      oracle: "python3 evaluate.py --branch sort"
+      direction: lower_is_better
+  - id: search
+    owns: [solutions/search.py]
+    metric:
+      name: search_time_ms
+      oracle: "python3 evaluate.py --branch search"
+      direction: lower_is_better
+
+composite_weights:
+  sort: 0.5
+  search: 0.5

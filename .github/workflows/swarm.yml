@@ -1,0 +1,90 @@
+# Parallel branch agent runner. Trigger via workflow_dispatch.
+# Creates swarm/<run_tag>/<branch_id> branches and runs agent on each.
+name: Swarm Research
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_tag:
+        description: "Run tag (e.g. poc_001)"
+        required: true
+        default: poc_001
+      branch_ids:
+        description: "Branch IDs (comma-separated, e.g. sort,search)"
+        required: true
+        default: "sort,search"
+      iterations:
+        description: "Max iterations per branch agent"
+        required: false
+        default: 20
+        type: number
+
+jobs:
+  prepare_matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      branch_ids: ${{ steps.matrix.outputs.branch_ids }}
+    steps:
+      - id: matrix
+        run: |
+          RAW="${{ inputs.branch_ids }}"
+          JSON="[\"$(echo "$RAW" | sed 's/,/","/g')\"]"
+          echo "branch_ids=$JSON" >> $GITHUB_OUTPUT
+
+  setup_branches:
+    needs: prepare_matrix
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Create and push swarm branches
+        run: |
+          RUN_TAG="${{ inputs.run_tag }}"
+          BRANCH_IDS="${{ inputs.branch_ids }}"
+          for bid in $(echo "$BRANCH_IDS" | tr ',' ' '); do
+            bid=$(echo "$bid" | xargs)
+            [ -z "$bid" ] && continue
+            git checkout -b "swarm/${RUN_TAG}/${bid}"
+            git push -u origin "swarm/${RUN_TAG}/${bid}" || true
+            git checkout main
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  branch_research:
+    needs: [prepare_matrix, setup_branches]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        branch_id: ${{ fromJson(needs.prepare_matrix.outputs.branch_ids) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: swarm/${{ inputs.run_tag }}/${{ matrix.branch_id }}
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Configure git for agent commits
+        run: |
+          git config user.email "swarm-agent@transmute.local"
+          git config user.name "Swarm Agent"
+      - name: Run branch agent
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          python3 agent.py --branch_id ${{ matrix.branch_id }} --iterations ${{ inputs.iterations }} --run_tag ${{ inputs.run_tag }}
+      - name: Push branch updates
+        run: git push origin "swarm/${{ inputs.run_tag }}/${{ matrix.branch_id }}"
+        continue-on-error: true
+      - name: Upload results TSV
+        uses: actions/upload-artifact@v4
+        with:
+          name: results-${{ matrix.branch_id }}
+          path: results_${{ matrix.branch_id }}.tsv
+          if-no-files-found: ignore

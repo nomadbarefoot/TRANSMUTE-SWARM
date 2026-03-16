@@ -1,0 +1,48 @@
+# Coordinator run: fetch results from swarm branches, run coordinator script, upload report.
+# Trigger after swarm.yml has completed. Uses OPENROUTER_API_KEY only if coordinator ever needs LLM (Phase 1 it does not).
+name: Coordinator
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_tag:
+        description: "Run tag (same as swarm run)"
+        required: true
+        default: poc_001
+      branch_ids:
+        description: "Branch IDs (comma-separated)"
+        required: true
+        default: "sort,search"
+
+jobs:
+  coordinator:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch swarm branches
+        run: git fetch origin
+      - name: Collect results TSVs from branches
+        run: |
+          RUN_TAG="${{ inputs.run_tag }}"
+          for bid in $(echo "${{ inputs.branch_ids }}" | tr ',' ' '); do
+            bid=$(echo "$bid" | xargs)
+            [ -z "$bid" ] && continue
+            git show "origin/swarm/${RUN_TAG}/${bid}:results_${bid}.tsv" > "results_${bid}.tsv" 2>/dev/null || echo "No results_${bid}.tsv on branch"
+          done
+          ls -la results_*.tsv 2>/dev/null || true
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run coordinator script
+        run: |
+          pip install pyyaml -q
+          python3 coordinator_script.py --run_tag "${{ inputs.run_tag }}" --branch_ids $(echo "${{ inputs.branch_ids }}" | tr ',' ' ')
+      - name: Upload coordinator report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coordinator-report
+          path: coordinator_report_*.md
+          if-no-files-found: ignore

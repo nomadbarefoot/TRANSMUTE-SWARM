@@ -31,9 +31,11 @@ def main() -> None:
     if header is None:
         raise SystemExit(f"Unknown branch_id '{branch_id}'. Expected one of: sort, search, filter.")
 
-    # Use TRANSMUTE-SWARM root (parent of scripts/) for results paths for now.
+    # Use TRANSMUTE-SWARM root (parent of scripts/) for results paths.
     root = Path(__file__).resolve().parents[1]
-    path = root / f"results_{branch_id}.tsv"
+    results_dir = root / "results"
+    results_dir.mkdir(parents=True, exist_ok=True)
+    path = results_dir / f"results_{branch_id}.tsv"
 
     # Create file with header if missing or empty.
     if not path.exists() or path.stat().st_size == 0:
@@ -51,4 +53,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

@@ -1,7 +1,8 @@
 """
 Sorting solution — branch 'sort' owns this file only.
-Optimization: use Python's built-in sorted (Timsort). O(n log n), C implementation.
+Optimization: in-place sort using list.sort() (Timsort, in-place, less allocation).
 """
 
 def sort(arr: list) -> list:
-    return sorted(arr)
+    arr.sort()
+    return arr

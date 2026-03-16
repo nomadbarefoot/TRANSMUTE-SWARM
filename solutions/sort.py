@@ -1,10 +1,11 @@
 """
 Sorting solution — branch 'sort' owns this file only.
-Try built-in sorted().
+Try list.sort() for in-place sorting (Timsort).
 Contract: must define sort(arr) that sorts the list in place or returns a sorted copy.
 """
 
 
 def sort(arr: list) -> list:
-    """Use Python's built-in sorted() which is O(n log n)."""
-    return sorted(arr)
+    """Use list.sort() which sorts in place (Timsort)."""
+    arr.sort()
+    return arr

@@ -1,8 +1,8 @@
 """
 Fixed oracle harness for TRANSMUTE-SWARM PoC. Do not modify.
 Tests branch-owned solution modules and outputs a single scalar (time_ms) for the agent loop.
-Usage: python evaluate.py --branch sort|search
-Output: grep-parseable lines (sort_time_ms: or search_time_ms:, input_size:, n_runs:).
+Usage: python evaluate.py --branch sort|search|filter
+Output: grep-parseable lines (<branch>_time_ms:, input_size:, n_runs:).
 """
 import argparse
 import random
@@ -32,7 +32,13 @@ def _get_solution_module(branch: str):
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
         return mod
-    raise ValueError(f"Unknown branch: {branch}. Use 'sort' or 'search'.")
+    if branch == "filter":
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("filter_solution", root / "solutions" / "filter.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+    raise ValueError(f"Unknown branch: {branch}. Use 'sort', 'search', or 'filter'.")
 
 
 def _benchmark_sort():
@@ -61,9 +67,23 @@ def _benchmark_search():
     return time_ms, INPUT_SIZE, N_RUNS * TIMER_REPEAT
 
 
+def _benchmark_filter():
+    random.seed(SEED)
+    mod = _get_solution_module("filter")
+    arr = sorted([random.randint(0, 10_000) for _ in range(INPUT_SIZE)])
+    thresholds = [random.randint(0, 10_000) for _ in range(N_RUNS)]
+    def run():
+        for t in thresholds:
+            mod.filter_le(arr, t)
+    times = timeit.repeat(run, number=1, repeat=TIMER_REPEAT)
+    time_sec = min(times)
+    time_ms = time_sec * 1000
+    return time_ms, INPUT_SIZE, N_RUNS * TIMER_REPEAT
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--branch", required=True, choices=["sort", "search"])
+    parser.add_argument("--branch", required=True, choices=["sort", "search", "filter"])
     args = parser.parse_args()
     branch = args.branch
 
@@ -71,9 +91,12 @@ def main():
         if branch == "sort":
             time_ms, input_size, n_runs = _benchmark_sort()
             metric_name = "sort_time_ms"
-        else:
+        elif branch == "search":
             time_ms, input_size, n_runs = _benchmark_search()
             metric_name = "search_time_ms"
+        else:
+            time_ms, input_size, n_runs = _benchmark_filter()
+            metric_name = "filter_time_ms"
     except Exception as e:
         print(f"FAIL: {e}", file=sys.stderr)
         sys.exit(1)

@@ -10,13 +10,13 @@ on:
         required: true
         default: poc_001
       branch_ids:
-        description: "Branch IDs (comma-separated, e.g. sort,search)"
+        description: "Branch IDs (comma-separated, e.g. sort,search,filter)"
         required: true
-        default: "sort,search"
+        default: "sort,search,filter"
       iterations:
         description: "Max iterations per branch agent"
         required: false
-        default: 20
+        default: 4
         type: number
 
 jobs:

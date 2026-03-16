@@ -10,7 +10,7 @@ This is an experiment to improve the search implementation. You are the search-b
    - `evaluate_composite.py` — fixed composite oracle. Do not modify.
    - `solutions/search.py` — the **only file you modify**. Contains the search implementation.
 3. **Do NOT touch**: `evaluate.py`, `evaluate_composite.py`, `solutions/sort.py`, or any other file.
-4. **Initialize results_search.tsv**: Create `results_search.tsv` with just the header row. The baseline will be recorded after the first run.
+4. **Initialize results_search.tsv**: Create `results_search.tsv` with header: `commit\tsearch_time_ms\tmemory_gb\tstatus\tdescription\tlog`. The baseline will be recorded after the first run.
 5. **Read** `discoveries/shared_context.md` at the start if it exists.
 
 Once setup is done, kick off the experimentation.
@@ -52,23 +52,28 @@ grep "^search_time_ms:" run.log
 
 ## Logging results
 
-Log each experiment to `results_search.tsv` (tab-separated). Do not commit this file; leave it untracked.
+Log **every** experiment to `results_search.tsv` (tab-separated)—both keep and discard. Do not commit this file; leave it untracked.
 
-The TSV has a header row and 5 columns:
+The TSV has a header row and 6 columns:
 
 ```
-commit	search_time_ms	memory_gb	status	description
+commit	search_time_ms	memory_gb	status	description	log
 ```
 
 1. git commit hash (short, 7 chars)
 2. search_time_ms achieved (e.g. 567.89) — use 0.0 for crashes
 3. memory_gb: use 0.0 (not applicable for this PoC)
 4. status: `keep`, `discard`, or `crash`
-5. short text description of what this experiment tried
+5. short label for the experiment (e.g. "Added early exit when arr[i] > target")
+6. **log** (1–2 lines): what you did, why, and whether it worked or not. Encode tabs as spaces so the line stays one TSV cell.
+
+Example log cells: "Added early exit; sorted input so we can stop early; kept, ~2x faster." or "Tried binary search; forgot to handle missing; crash, reverted."
+
+**TSV append:** Use `printf '%s\t...' "$(git rev-parse --short HEAD)" ... >> results_search.tsv` or a one-line Python print. Do not use `echo -e` — it can prefix the commit column with "-e" and break downstream parsing.
 
 ## The experiment loop
 
-LOOP for the number of iterations you are told (e.g. 20), or until you are stopped:
+LOOP for the number of iterations you are told (e.g. 3 or 4), or until you are stopped:
 
 1. Look at the git state: current branch and commit.
 2. Modify `solutions/search.py` with an experimental idea.
@@ -76,7 +81,7 @@ LOOP for the number of iterations you are told (e.g. 20), or until you are stopp
 4. Run the oracle: `python3 evaluate.py --branch search > run.log 2>&1` (redirect everything; do NOT use tee).
 5. Read the result: `grep "^search_time_ms:" run.log`
 6. If the grep output is empty, the run crashed. Run `tail -n 50 run.log` to see the error. Fix if trivial (typo, import); otherwise log "crash" and revert.
-7. Record the results in results_search.tsv (do not commit results_search.tsv).
+7. Append one row to results_search.tsv for this experiment (commit, search_time_ms, memory_gb, status, description, log). Do not commit the TSV.
 8. If search_time_ms improved (lower), keep the commit and advance.
 9. If search_time_ms is equal or worse, run `git reset --hard HEAD~1` to discard.
 

@@ -1,16 +1,17 @@
 """
 Fixed composite oracle for TRANSMUTE-SWARM PoC. Do not modify.
-Runs both branch oracles and outputs weighted composite time (lower is better).
+Runs all branch oracles and outputs weighted composite time (lower is better).
 Usage: python evaluate_composite.py
-Output: grep-parseable lines (composite_ms, sort_time_ms, search_time_ms, weights).
+Output: grep-parseable lines (composite_ms, sort_time_ms, search_time_ms, filter_time_ms, weights).
 """
 import subprocess
 import sys
 from pathlib import Path
 
 # Weights from decomposition.yaml (must match)
-SORT_WEIGHT = 0.5
-SEARCH_WEIGHT = 0.5
+SORT_WEIGHT = 1.0 / 3
+SEARCH_WEIGHT = 1.0 / 3
+FILTER_WEIGHT = 1.0 / 3
 
 
 def run_oracle(branch: str) -> float:
@@ -21,7 +22,7 @@ def run_oracle(branch: str) -> float:
         capture_output=True,
         text=True,
         cwd=root,
-        timeout=120,
+        timeout=300,
     )
     if result.returncode != 0:
         raise RuntimeError(f"evaluate.py --branch {branch} failed: {result.stderr}")
@@ -38,14 +39,17 @@ def run_oracle(branch: str) -> float:
 def main():
     sort_ms = run_oracle("sort")
     search_ms = run_oracle("search")
-    composite_ms = SORT_WEIGHT * sort_ms + SEARCH_WEIGHT * search_ms
+    filter_ms = run_oracle("filter")
+    composite_ms = SORT_WEIGHT * sort_ms + SEARCH_WEIGHT * search_ms + FILTER_WEIGHT * filter_ms
 
     print("---")
     print(f"composite_ms:     {composite_ms:.2f}")
     print(f"sort_time_ms:     {sort_ms:.2f}")
     print(f"search_time_ms:   {search_ms:.2f}")
+    print(f"filter_time_ms:   {filter_ms:.2f}")
     print(f"sort_weight:      {SORT_WEIGHT}")
     print(f"search_weight:    {SEARCH_WEIGHT}")
+    print(f"filter_weight:    {FILTER_WEIGHT}")
 
 
 if __name__ == "__main__":

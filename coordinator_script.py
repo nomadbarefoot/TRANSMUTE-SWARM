@@ -6,6 +6,7 @@ No LLM. Human runs this after branches complete.
 Expects results_<branch_id>.tsv in repo root (or --results_dir) with columns: commit, <metric>, memory_gb, status, description.
 """
 import argparse
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -18,7 +19,7 @@ def run(cwd: Path, *cmd, check: bool = True) -> subprocess.CompletedProcess:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--run_tag", default="poc_001")
-    parser.add_argument("--branch_ids", nargs="+", default=["sort", "search"])
+    parser.add_argument("--branch_ids", nargs="+", default=["sort", "search", "filter"])
     parser.add_argument("--results_dir", type=Path, default=None, help="Directory containing results_*.tsv (default: repo root)")
     parser.add_argument("--cycle", type=int, default=1)
     args = parser.parse_args()
@@ -30,7 +31,7 @@ def main():
     cycle = args.cycle
 
     # 1. Read results TSVs and find best keep commit per branch
-    metric_key = {"sort": "sort_time_ms", "search": "search_time_ms"}
+    metric_key = {"sort": "sort_time_ms", "search": "search_time_ms", "filter": "filter_time_ms"}
     best = {}  # branch_id -> (commit, metric_value)
     for bid in branch_ids:
         tsv = results_dir / f"results_{bid}.tsv"
@@ -62,7 +63,13 @@ def main():
                 continue
             if best_metric is None or (val < best_metric if lower_better else val > best_metric):
                 best_metric = val
-                best_commit = parts[commit_col].strip()[:7]
+                raw = parts[commit_col].strip()
+                # Strip shell-artifact prefixes (e.g. echo -e producing "-e 2b1e346")
+                if raw.startswith("-e "):
+                    raw = raw[3:].strip()
+                # Take first 7 chars (short hash) or extract first 7-char hex if embedded
+                hex_match = re.search(r"[0-9a-fA-F]{7,}", raw)
+                best_commit = (hex_match.group(0)[:7] if hex_match else raw[:7]).strip()
         if best_commit and best_metric is not None:
             best[bid] = (best_commit, best_metric)
 
@@ -131,7 +138,9 @@ def main():
                         composite_without = float(line.split(":", 1)[1].strip())
                         break
             if composite_before_abl is not None and composite_without is not None:
-                marginal[omit_bid] = composite_before_abl - composite_without  # positive = branch helped
+                # Lower is better: removing a helpful branch worsens composite (higher).
+                # So composite_without > composite_before_abl when branch helped → marginal positive.
+                marginal[omit_bid] = composite_without - composite_before_abl  # positive = branch helped
             else:
                 marginal[omit_bid] = None
         except Exception:

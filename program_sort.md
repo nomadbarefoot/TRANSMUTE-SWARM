@@ -10,7 +10,7 @@ This is an experiment to improve the sorting implementation. You are the sort-br
    - `evaluate_composite.py` — fixed composite oracle. Do not modify.
    - `solutions/sort.py` — the **only file you modify**. Contains the sorting implementation.
 3. **Do NOT touch**: `evaluate.py`, `evaluate_composite.py`, `solutions/search.py`, or any other file.
-4. **Initialize results_sort.tsv**: Create `results_sort.tsv` with just the header row. The baseline will be recorded after the first run.
+4. **Initialize results_sort.tsv**: Create `results_sort.tsv` with header: `commit\tsort_time_ms\tmemory_gb\tstatus\tdescription\tlog`. The baseline will be recorded after the first run.
 5. **Read** `discoveries/shared_context.md` at the start if it exists.
 
 Once setup is done, kick off the experimentation.
@@ -52,23 +52,28 @@ grep "^sort_time_ms:" run.log
 
 ## Logging results
 
-Log each experiment to `results_sort.tsv` (tab-separated). Do not commit this file; leave it untracked.
+Log **every** experiment to `results_sort.tsv` (tab-separated)—both keep and discard. Do not commit this file; leave it untracked.
 
-The TSV has a header row and 5 columns:
+The TSV has a header row and 6 columns:
 
 ```
-commit	sort_time_ms	memory_gb	status	description
+commit	sort_time_ms	memory_gb	status	description	log
 ```
 
 1. git commit hash (short, 7 chars)
 2. sort_time_ms achieved (e.g. 1234.56) — use 0.0 for crashes
 3. memory_gb: use 0.0 (not applicable for this PoC)
 4. status: `keep`, `discard`, or `crash`
-5. short text description of what this experiment tried
+5. short label for the experiment (e.g. "Tried built-in sorted()")
+6. **log** (1–2 lines): what you did, why, and whether it worked or not. Encode tabs as spaces so the line stays one TSV cell.
+
+Example log cells: "Replaced bubble with sorted(); expected O(n log n) win; kept, ~2000x faster." or "Removed backward pass only; still O(n^2), no improvement; discarded."
+
+**TSV append:** Use `printf '%s\t...' "$(git rev-parse --short HEAD)" ... >> results_sort.tsv` or a one-line Python print (e.g. `python3 -c 'print(...)' >> results_sort.tsv`). Do not use `echo -e` — it can prefix the commit column with "-e" and break downstream parsing.
 
 ## The experiment loop
 
-LOOP for the number of iterations you are told (e.g. 20), or until you are stopped:
+LOOP for the number of iterations you are told (e.g. 3 or 4), or until you are stopped:
 
 1. Look at the git state: current branch and commit.
 2. Modify `solutions/sort.py` with an experimental idea.
@@ -76,7 +81,7 @@ LOOP for the number of iterations you are told (e.g. 20), or until you are stopp
 4. Run the oracle: `python3 evaluate.py --branch sort > run.log 2>&1` (redirect everything; do NOT use tee).
 5. Read the result: `grep "^sort_time_ms:" run.log`
 6. If the grep output is empty, the run crashed. Run `tail -n 50 run.log` to see the error. Fix if trivial (typo, import); otherwise log "crash" and revert.
-7. Record the results in results_sort.tsv (do not commit results_sort.tsv).
+7. Append one row to results_sort.tsv for this experiment (commit, sort_time_ms, memory_gb, status, description, log). Do not commit the TSV.
 8. If sort_time_ms improved (lower), keep the commit and advance.
 9. If sort_time_ms is equal or worse, run `git reset --hard HEAD~1` to discard.
 

@@ -1,0 +1,20 @@
+# Secrets — never commit
+keys.env
+
+# Per-branch experiment logs (untracked like autoresearch results.tsv)
+results_*.tsv
+run_*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+*.egg-info/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo

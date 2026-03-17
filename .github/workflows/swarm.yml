@@ -1,5 +1,5 @@
-# Parallel branch agent runner. Trigger via workflow_dispatch.
-# Creates swarm/<run_tag>/<branch_id> branches and runs agent on each.
+# Parallel Cog runner. Trigger via workflow_dispatch.
+# Creates cogs/<run_tag>/<cog_id> branches via cog_manager and runs one agent per Cog.
 name: Swarm Research
 
 on:
@@ -9,12 +9,12 @@ on:
         description: "Run tag (e.g. poc_001)"
         required: true
         default: poc_001
-      branch_ids:
-        description: "Branch IDs (comma-separated, e.g. sort,search,filter)"
+      cog_ids:
+        description: "Cog IDs (comma-separated, e.g. sort,search,filter)"
         required: true
         default: "sort,search,filter"
       iterations:
-        description: "Max iterations per branch agent"
+        description: "Max experiment iterations per Cog"
         required: false
         default: 4
         type: number
@@ -23,50 +23,22 @@ jobs:
   prepare_matrix:
     runs-on: ubuntu-latest
     outputs:
-      branch_ids: ${{ steps.matrix.outputs.branch_ids }}
+      cog_ids: ${{ steps.matrix.outputs.cog_ids }}
     steps:
       - id: matrix
         run: |
-          RAW="${{ inputs.branch_ids }}"
+          RAW="${{ inputs.cog_ids }}"
           JSON="[\"$(echo "$RAW" | sed 's/,/","/g')\"]"
-          echo "branch_ids=$JSON" >> $GITHUB_OUTPUT
+          echo "cog_ids=$JSON" >> $GITHUB_OUTPUT
 
-  setup_branches:
+  setup_cog_branches:
     needs: prepare_matrix
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # required to push new swarm branches
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-      - name: Create and push swarm branches
-        run: |
-          RUN_TAG="${{ inputs.run_tag }}"
-          BRANCH_IDS="${{ inputs.branch_ids }}"
-          for bid in $(echo "$BRANCH_IDS" | tr ',' ' '); do
-            bid=$(echo "$bid" | xargs)
-            [ -z "$bid" ] && continue
-            git checkout -b "swarm/${RUN_TAG}/${bid}"
-            git push -u origin "swarm/${RUN_TAG}/${bid}"
-            git checkout main
-          done
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  branch_research:
-    needs: [prepare_matrix, setup_branches]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write  # required to push agent commits back to swarm branch
-    strategy:
-      fail-fast: false
-      matrix:
-        branch_id: ${{ fromJson(needs.prepare_matrix.outputs.branch_ids) }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: swarm/${{ inputs.run_tag }}/${{ matrix.branch_id }}
           fetch-depth: 0
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -74,21 +46,57 @@ jobs:
           python-version: "3.11"
       - name: Install dependencies
         run: pip install -r config/requirements.txt
-      - name: Configure git for agent commits
+      - name: Configure git
         run: |
           git config user.email "swarm-agent@transmute.local"
           git config user.name "Swarm Agent"
-      - name: Run branch agent
+      - name: Create and push Cog branches
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 agents/cog_manager.py create \
+            --run_tag "${{ inputs.run_tag }}" \
+            --cog_ids "${{ inputs.cog_ids }}" \
+            --push
+
+  cog_research:
+    needs: [prepare_matrix, setup_cog_branches]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        cog_id: ${{ fromJson(needs.prepare_matrix.outputs.cog_ids) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: cogs/${{ inputs.run_tag }}/${{ matrix.cog_id }}
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -r config/requirements.txt
+      - name: Configure git for Cog commits
+        run: |
+          git config user.email "cog-${{ matrix.cog_id }}@transmute.local"
+          git config user.name "Cog ${{ matrix.cog_id }}"
+      - name: Run Cog agent
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
-          python3 agents/agent.py --branch_id ${{ matrix.branch_id }} --iterations ${{ inputs.iterations }} --run_tag ${{ inputs.run_tag }}
-      - name: Push branch updates
-        run: git push origin "swarm/${{ inputs.run_tag }}/${{ matrix.branch_id }}"
+          python3 agents/agent.py \
+            --branch_id ${{ matrix.cog_id }} \
+            --iterations ${{ inputs.iterations }} \
+            --run_tag ${{ inputs.run_tag }}
+      - name: Push Cog results
+        run: git push origin "cogs/${{ inputs.run_tag }}/${{ matrix.cog_id }}"
         continue-on-error: true
       - name: Upload results TSV
         uses: actions/upload-artifact@v4
         with:
-          name: results-${{ matrix.branch_id }}
-          path: results/results_${{ matrix.branch_id }}.tsv
+          name: results-${{ matrix.cog_id }}
+          path: results/results_${{ matrix.cog_id }}.tsv
           if-no-files-found: ignore

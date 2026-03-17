@@ -1,0 +1,42 @@
+===== 2026-03-17T22:28:45Z mode=full desc=Baseline bubble sort =====
+---
+sort_time_ms:  60082.78
+input_size:    5000
+n_runs:        150
+
+===== 2026-03-17T22:29:02Z mode=quick desc=In-place list.sort() =====
+---
+sort_time_ms:  2.47
+input_size:    5000
+n_runs:        10
+
+===== 2026-03-17T22:29:02Z mode=full desc=In-place list.sort() =====
+---
+sort_time_ms:  10.39
+input_size:    5000
+n_runs:        150
+
+===== 2026-03-17T22:29:45Z mode=quick desc=Counting sort linear time =====
+---
+sort_time_ms:  7.82
+input_size:    5000
+n_runs:        10
+
+===== 2026-03-17T22:29:45Z mode=full desc=Counting sort linear time =====
+---
+sort_time_ms:  36.10
+input_size:    5000
+n_runs:        150
+
+===== 2026-03-17T22:30:38Z mode=quick desc=Optimized counting sort fixed range =====
+---
+sort_time_ms:  6.13
+input_size:    5000
+n_runs:        10
+
+===== 2026-03-17T22:30:38Z mode=full desc=Optimized counting sort fixed range =====
+---
+sort_time_ms:  28.07
+input_size:    5000
+n_runs:        150
+

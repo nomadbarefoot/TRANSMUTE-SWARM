@@ -79,7 +79,7 @@ def _policy_violation(command: str) -> Optional[str]:
     if not cmd:
         return None
     lowered = cmd.lower()
-    if "evaluate.py" in lowered or "append_tsv.py" in lowered:
+    if "evaluate.py" in lowered or "evaluate_finance.py" in lowered or "append_tsv.py" in lowered:
         return "Policy: oracle and TSV writes must be via run_experiment.sh."
     if "git commit" in lowered or "git reset" in lowered or "git checkout" in lowered:
         return "Policy: git operations are handled by run_experiment.sh."

@@ -74,11 +74,12 @@ case "$branch" in
   sort) metric_name="sort_time_ms" ;;
   search) metric_name="search_time_ms" ;;
   filter) metric_name="filter_time_ms" ;;
+  finance) metric_name="finance_sharpe_neg" ;;
   *)
-    echo "Unknown branch: $branch (expected sort, search, or filter)" >&2
+    echo "Unknown branch: $branch (expected sort, search, filter, or finance)" >&2
     exit 1
     ;;
- esac
+esac
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$repo_root"
@@ -101,7 +102,11 @@ fi
 run_oracle() {
   local oracle_mode="$1"
   local out_file="$2"
-  python3 oracles/evaluate.py --branch "$branch" --mode "$oracle_mode" > "$out_file" 2>&1 || return 1
+  if [[ "$branch" == "finance" ]]; then
+    python3 oracles/evaluate_finance.py --mode "$oracle_mode" > "$out_file" 2>&1 || return 1
+  else
+    python3 oracles/evaluate.py --branch "$branch" --mode "$oracle_mode" > "$out_file" 2>&1 || return 1
+  fi
 }
 
 parse_metric() {

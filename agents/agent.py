@@ -37,8 +37,10 @@ TOOL_DEF = {
 
 
 def get_model_config(root: Path) -> dict:
-    """Load primary and fallback from model_config.yaml. Defaults if file missing."""
-    cfg_path = root / "model_config.yaml"
+    """Load primary and fallback from config/model_config.yaml. Defaults if file missing."""
+    cfg_path = root / "config" / "model_config.yaml"
+    if not cfg_path.exists():
+        cfg_path = root / "model_config.yaml"
     if cfg_path.exists():
         with open(cfg_path) as f:
             return yaml.safe_load(f) or {}

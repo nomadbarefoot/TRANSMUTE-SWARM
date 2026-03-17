@@ -452,7 +452,7 @@ def main():
         sys.exit(1)
 
     solution_path = BRANCH_SOLUTION_FILES[branch_id]
-    program_path = root / "prompts" / "programs" / f"program_{branch_id}.md"
+    program_path = root / "cogs" / branch_id / "program.md"
     shared_path = root / "discoveries" / "shared_context.md"
 
     if not program_path.exists():

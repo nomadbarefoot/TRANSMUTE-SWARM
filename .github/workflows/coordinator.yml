@@ -1,5 +1,5 @@
-# Coordinator run: get results TSVs from swarm artifacts, run coordinator script, upload report.
-# Trigger after swarm.yml (provide swarm_run_id when manual) or via workflow_run when swarm completes.
+# Coordinator run: collect Cog results, synthesize, upload report.
+# Trigger manually (provide swarm_run_id) or automatically after Swarm Research completes.
 name: Coordinator
 
 on:
@@ -9,8 +9,8 @@ on:
         description: "Run tag (same as swarm run)"
         required: true
         default: poc_001
-      branch_ids:
-        description: "Branch IDs (comma-separated)"
+      cog_ids:
+        description: "Cog IDs (comma-separated)"
         required: true
         default: "sort,search,filter"
       swarm_run_id:
@@ -26,27 +26,27 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      actions: read   # required to download artifacts from another run (swarm_run_id)
+      actions: read
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Fetch swarm branches
+      - name: Fetch Cog branches
         run: git fetch origin
-      - name: Set run tag and branch IDs
+      - name: Set run tag and Cog IDs
         id: vars
         run: |
           if [ "${{ github.event_name }}" = "workflow_run" ]; then
             RUN_ID="${{ github.event.workflow_run.id }}"
             echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
             RUN_TAG=$(gh run view "$RUN_ID" --json inputs -q '.inputs.run_tag // "poc_001"' 2>/dev/null || echo "poc_001")
-            BRANCH_IDS=$(gh run view "$RUN_ID" --json inputs -q '.inputs.branch_ids // "sort,search,filter"' 2>/dev/null || echo "sort,search,filter")
+            COG_IDS=$(gh run view "$RUN_ID" --json inputs -q '.inputs.cog_ids // "sort,search,filter"' 2>/dev/null || echo "sort,search,filter")
             echo "run_tag=$RUN_TAG" >> $GITHUB_OUTPUT
-            echo "branch_ids=$BRANCH_IDS" >> $GITHUB_OUTPUT
+            echo "cog_ids=$COG_IDS" >> $GITHUB_OUTPUT
           else
             echo "run_id=${{ inputs.swarm_run_id }}" >> $GITHUB_OUTPUT
             echo "run_tag=${{ inputs.run_tag }}" >> $GITHUB_OUTPUT
-            echo "branch_ids=${{ inputs.branch_ids }}" >> $GITHUB_OUTPUT
+            echo "cog_ids=${{ inputs.cog_ids }}" >> $GITHUB_OUTPUT
           fi
       - name: Download results TSVs from swarm artifacts
         if: steps.vars.outputs.run_id != ''
@@ -55,39 +55,43 @@ jobs:
         run: |
           RUN_ID="${{ steps.vars.outputs.run_id }}"
           mkdir -p results
-          for bid in $(echo "${{ steps.vars.outputs.branch_ids }}" | tr ',' ' '); do
-            bid=$(echo "$bid" | xargs)
-            [ -z "$bid" ] && continue
-            gh run download "$RUN_ID" -n "results-${bid}" -D "results-${bid}" || true
-            if [ -f "results-${bid}/results_${bid}.tsv" ]; then
-              cp "results-${bid}/results_${bid}.tsv" results/
+          for cid in $(echo "${{ steps.vars.outputs.cog_ids }}" | tr ',' ' '); do
+            cid=$(echo "$cid" | xargs)
+            [ -z "$cid" ] && continue
+            gh run download "$RUN_ID" -n "results-${cid}" -D "results-${cid}" || true
+            if [ -f "results-${cid}/results_${cid}.tsv" ]; then
+              cp "results-${cid}/results_${cid}.tsv" results/
             fi
           done
           echo "TSV files in results/:"
           ls -la results/results_*.tsv 2>/dev/null || true
-          if [ ! -f results/results_sort.tsv ] && [ ! -f results/results_search.tsv ] && [ ! -f results/results_filter.tsv ]; then
-            echo "ERROR: No results_*.tsv found in results/ after download."
+          if ! ls results/results_*.tsv 1>/dev/null 2>&1; then
+            echo "ERROR: No results_*.tsv found in results/ after download." >&2
             exit 1
           fi
-      - name: Collect results TSVs from branches (fallback when no swarm_run_id)
+      - name: Collect results TSVs from Cog branches (fallback when no swarm_run_id)
         if: steps.vars.outputs.run_id == ''
         run: |
           mkdir -p results
           RUN_TAG="${{ steps.vars.outputs.run_tag }}"
-          for bid in $(echo "${{ steps.vars.outputs.branch_ids }}" | tr ',' ' '); do
-            bid=$(echo "$bid" | xargs)
-            [ -z "$bid" ] && continue
-            git show "origin/swarm/${RUN_TAG}/${bid}:results/results_${bid}.tsv" > "results/results_${bid}.tsv" 2>/dev/null || git show "origin/swarm/${RUN_TAG}/${bid}:results_${bid}.tsv" > "results/results_${bid}.tsv" 2>/dev/null || echo "No results_${bid}.tsv on branch"
+          for cid in $(echo "${{ steps.vars.outputs.cog_ids }}" | tr ',' ' '); do
+            cid=$(echo "$cid" | xargs)
+            [ -z "$cid" ] && continue
+            git show "origin/cogs/${RUN_TAG}/${cid}:results/results_${cid}.tsv" > "results/results_${cid}.tsv" 2>/dev/null \
+              || echo "No results_${cid}.tsv on cogs/${RUN_TAG}/${cid}"
           done
           ls -la results/results_*.tsv 2>/dev/null || true
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Run coordinator script
+      - name: Install dependencies
+        run: pip install -r config/requirements.txt
+      - name: Run coordinator
         run: |
-          pip install pyyaml -q
-          python3 agents/coordinator_script.py --run_tag "${{ steps.vars.outputs.run_tag }}" --branch_ids $(echo "${{ steps.vars.outputs.branch_ids }}" | tr ',' ' ')
+          python3 agents/coordinator_script.py \
+            --run_tag "${{ steps.vars.outputs.run_tag }}" \
+            --branch_ids $(echo "${{ steps.vars.outputs.cog_ids }}" | tr ',' ' ')
       - name: Upload coordinator report
         uses: actions/upload-artifact@v4
         with:

@@ -1,0 +1,36 @@
+===== 2026-03-16T22:35:53Z mode=full desc=baseline =====
+---
+search_time_ms:  3.34
+input_size:    5000
+n_runs:        150
+
+===== 2026-03-16T22:35:55Z mode=quick desc=Binary search =====
+---
+search_time_ms:  0.01
+input_size:    5000
+n_runs:        10
+
+===== 2026-03-16T22:35:55Z mode=full desc=Binary search =====
+---
+search_time_ms:  0.03
+input_size:    5000
+n_runs:        150
+
+===== 2026-03-16T22:36:00Z mode=quick desc=Using bisect =====
+---
+search_time_ms:  0.01
+input_size:    5000
+n_runs:        10
+
+===== 2026-03-16T22:36:00Z mode=full desc=Using bisect =====
+---
+search_time_ms:  0.01
+input_size:    5000
+n_runs:        150
+
+===== 2026-03-16T22:36:04Z mode=quick desc=bisect with local binding =====
+---
+search_time_ms:  0.01
+input_size:    5000
+n_runs:        10
+

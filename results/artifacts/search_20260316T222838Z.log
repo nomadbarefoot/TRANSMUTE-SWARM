@@ -1,0 +1,18 @@
+===== 2026-03-16T21:12:48Z mode=full desc=baseline =====
+---
+search_time_ms:  3.21
+input_size:    5000
+n_runs:        150
+
+===== 2026-03-16T21:42:43Z mode=quick desc=noop =====
+---
+search_time_ms:  0.68
+input_size:    5000
+n_runs:        10
+
+===== 2026-03-16T21:42:43Z mode=full desc=noop =====
+---
+search_time_ms:  3.33
+input_size:    5000
+n_runs:        150
+

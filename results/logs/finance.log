@@ -1,0 +1,84 @@
+===== 2026-03-17T00:02:12Z mode=full desc=baseline =====
+---
+finance_sharpe_neg:  1000000000.000000
+n_points:           61
+mode:               full
+
+===== 2026-03-17T00:02:25Z mode=quick desc=Tune windows and RSI ceiling =====
+---
+finance_sharpe_neg:  1.749206
+n_points:           61
+mode:               quick
+
+===== 2026-03-17T00:02:25Z mode=full desc=Tune windows and RSI ceiling =====
+---
+finance_sharpe_neg:  1.749206
+n_points:           61
+mode:               full
+
+===== 2026-03-17T00:02:35Z mode=quick desc=Add RSI floor=30 =====
+---
+finance_sharpe_neg:  1.749206
+n_points:           61
+mode:               quick
+
+===== 2026-03-17T00:02:40Z mode=quick desc=Tune windows to 12/35 =====
+---
+finance_sharpe_neg:  2.952805
+n_points:           61
+mode:               quick
+
+===== 2026-03-17T00:02:47Z mode=quick desc=Remove RSI filter =====
+---
+finance_sharpe_neg:  1.749206
+n_points:           61
+mode:               quick
+
+===== 2026-03-17T00:02:53Z mode=quick desc=Faster MA: 8/20 =====
+---
+finance_sharpe_neg:  0.778931
+n_points:           61
+mode:               quick
+
+===== 2026-03-17T00:02:53Z mode=full desc=Faster MA: 8/20 =====
+---
+finance_sharpe_neg:  0.778931
+n_points:           61
+mode:               full
+
+===== 2026-03-17T00:02:58Z mode=quick desc=Refine: 9/22, RSI ceiling=65 =====
+---
+finance_sharpe_neg:  1.372691
+n_points:           61
+mode:               quick
+
+===== 2026-03-17T00:03:03Z mode=quick desc=MA only 8/20 =====
+---
+finance_sharpe_neg:  0.778931
+n_points:           61
+mode:               quick
+
+===== 2026-03-17T00:03:08Z mode=quick desc=Windows 10/25, RSI<60 =====
+---
+finance_sharpe_neg:  2.815582
+n_points:           61
+mode:               quick
+
+===== 2026-03-17T00:03:13Z mode=quick desc=MA only 5/15 =====
+---
+finance_sharpe_neg:  2.400467
+n_points:           61
+mode:               quick
+
+===== 2026-03-17T00:03:20Z mode=quick desc=8/20 with RSI ceiling=80 =====
+---
+finance_sharpe_neg:  0.778931
+n_points:           61
+mode:               quick
+
+===== 2026-03-17T00:03:26Z mode=quick desc=8/20, RSI period=10 =====
+---
+finance_sharpe_neg:  0.778931
+n_points:           61
+mode:               quick
+

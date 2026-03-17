@@ -1,0 +1,66 @@
+===== 2026-03-16T23:49:56Z mode=full desc=baseline =====
+---
+finance_sharpe_neg:  0.778931
+n_points:           61
+mode:               full
+
+===== 2026-03-16T23:50:03Z mode=quick desc=Tune windows to 10/30 =====
+---
+finance_sharpe_neg:  1.749206
+n_points:           61
+mode:               quick
+
+===== 2026-03-16T23:50:12Z mode=quick desc=Trend filter on long MA =====
+---
+finance_sharpe_neg:  2.515382
+n_points:           61
+mode:               quick
+
+===== 2026-03-16T23:50:17Z mode=quick desc=Windows 10/50 =====
+---
+finance_sharpe_neg:  1000000000.000000
+n_points:           61
+mode:               quick
+
+===== 2026-03-16T23:50:21Z mode=quick desc=Windows 8/30 =====
+---
+finance_sharpe_neg:  2.153471
+n_points:           61
+mode:               quick
+
+===== 2026-03-16T23:50:24Z mode=quick desc=Windows 6/25 =====
+---
+finance_sharpe_neg:  1.113007
+n_points:           61
+mode:               quick
+
+===== 2026-03-16T23:50:36Z mode=quick desc=Momentum filter 5d =====
+---
+finance_sharpe_neg:  1.445754
+n_points:           61
+mode:               quick
+
+===== 2026-03-16T23:50:40Z mode=quick desc=Windows 7/28 =====
+---
+finance_sharpe_neg:  2.099964
+n_points:           61
+mode:               quick
+
+===== 2026-03-16T23:50:43Z mode=quick desc=Hysteresis 2-day =====
+---
+finance_sharpe_neg:  1.343140
+n_points:           61
+mode:               quick
+
+===== 2026-03-16T23:50:47Z mode=quick desc=Windows 3/15 =====
+---
+finance_sharpe_neg:  1.806721
+n_points:           61
+mode:               quick
+
+===== 2026-03-16T23:50:50Z mode=quick desc=Windows 4/12 =====
+---
+finance_sharpe_neg:  1.503245
+n_points:           61
+mode:               quick
+

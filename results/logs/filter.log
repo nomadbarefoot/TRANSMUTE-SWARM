@@ -1,0 +1,30 @@
+===== 2026-03-16T22:35:53Z mode=full desc=baseline =====
+---
+filter_time_ms:  275.50
+input_size:    5000
+n_runs:        150
+
+===== 2026-03-16T22:36:02Z mode=quick desc=Single-pass append =====
+---
+filter_time_ms:  0.64
+input_size:    5000
+n_runs:        10
+
+===== 2026-03-16T22:36:02Z mode=full desc=Single-pass append =====
+---
+filter_time_ms:  2.48
+input_size:    5000
+n_runs:        150
+
+===== 2026-03-16T22:36:08Z mode=quick desc=List comprehension =====
+---
+filter_time_ms:  0.57
+input_size:    5000
+n_runs:        10
+
+===== 2026-03-16T22:36:08Z mode=full desc=List comprehension =====
+---
+filter_time_ms:  2.43
+input_size:    5000
+n_runs:        150
+

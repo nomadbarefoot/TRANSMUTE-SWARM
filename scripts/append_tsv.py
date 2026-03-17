@@ -16,6 +16,7 @@ HEADERS = {
     "sort": "commit\tsort_time_ms\tmemory_gb\tstatus\tdescription\tlog\n",
     "search": "commit\tsearch_time_ms\tmemory_gb\tstatus\tdescription\tlog\n",
     "filter": "commit\tfilter_time_ms\tmemory_gb\tstatus\tdescription\tlog\n",
+    "finance": "commit\tfinance_sharpe_neg\tmemory_gb\tstatus\tdescription\tlog\n",
 }
 
 

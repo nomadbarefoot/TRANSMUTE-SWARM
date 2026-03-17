@@ -20,7 +20,7 @@ PoC implementation of the Swarm Research System from `docs/SWARM_DESIGN.md`. Ext
 
 3. **Probe models** (run once to pick primary + fallback)
    ```bash
-   python probe_models.py
+   python scripts/probe_models.py
    ```
    Writes `config/model_config.yaml`.
 

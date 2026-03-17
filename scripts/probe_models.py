@@ -1,7 +1,7 @@
 """
 Model availability and quality tester for TRANSMUTE-SWARM.
 Tests OpenRouter free models for availability, tool-use support, and instruction following.
-Writes model_config.yaml with primary and fallback recommendation.
+Writes config/model_config.yaml with primary and fallback recommendation.
 Run once before the first swarm run. Loads OPENROUTER_API_KEY from env or keys.env.
 """
 import os
@@ -12,7 +12,7 @@ from pathlib import Path
 
 try:
     from dotenv import load_dotenv
-    load_dotenv(Path(__file__).resolve().parent / "keys.env")
+    load_dotenv(Path(__file__).resolve().parents[1] / "keys.env")
 except Exception:
     pass
 
@@ -143,7 +143,7 @@ def test_instruction_quality(client: OpenAI, model: str) -> tuple[int, float]:
 
 def main():
     client = get_client()
-    root = Path(__file__).resolve().parent
+    root = Path(__file__).resolve().parents[1]
     results = []
 
     print("Model Probe Report — TRANSMUTE-SWARM")
@@ -188,7 +188,7 @@ def main():
     print(f"  PRIMARY:  {primary}")
     print(f"  FALLBACK: {fallback}")
 
-    # Write model_config.yaml
+    # Write config/model_config.yaml
     import yaml
     from datetime import datetime, timezone
     config = {
@@ -196,10 +196,8 @@ def main():
         "fallback": fallback,
         "tested_on": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"),
     }
-    with open(root / "model_config.yaml", "w") as f:
+    config_path = root / "config" / "model_config.yaml"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(config_path, "w") as f:
         yaml.safe_dump(config, f, default_flow_style=False)
-    print(f"\nWrote {root / 'model_config.yaml'}")
-
-
-if __name__ == "__main__":
-    main()
+    print(f"\nWrote {config_path}")

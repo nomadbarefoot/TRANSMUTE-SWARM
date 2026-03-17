@@ -54,30 +54,32 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           RUN_ID="${{ steps.vars.outputs.run_id }}"
+          mkdir -p results
           for bid in $(echo "${{ steps.vars.outputs.branch_ids }}" | tr ',' ' '); do
             bid=$(echo "$bid" | xargs)
             [ -z "$bid" ] && continue
             gh run download "$RUN_ID" -n "results-${bid}" -D "results-${bid}" || true
             if [ -f "results-${bid}/results_${bid}.tsv" ]; then
-              cp "results-${bid}/results_${bid}.tsv" .
+              cp "results-${bid}/results_${bid}.tsv" results/
             fi
           done
-          echo "TSV files in workspace:"
-          ls -la results_*.tsv 2>/dev/null || true
-          if [ ! -f results_sort.tsv ] && [ ! -f results_search.tsv ] && [ ! -f results_filter.tsv ]; then
-            echo "ERROR: No results_*.tsv found after download."
+          echo "TSV files in results/:"
+          ls -la results/results_*.tsv 2>/dev/null || true
+          if [ ! -f results/results_sort.tsv ] && [ ! -f results/results_search.tsv ] && [ ! -f results/results_filter.tsv ]; then
+            echo "ERROR: No results_*.tsv found in results/ after download."
             exit 1
           fi
       - name: Collect results TSVs from branches (fallback when no swarm_run_id)
         if: steps.vars.outputs.run_id == ''
         run: |
+          mkdir -p results
           RUN_TAG="${{ steps.vars.outputs.run_tag }}"
           for bid in $(echo "${{ steps.vars.outputs.branch_ids }}" | tr ',' ' '); do
             bid=$(echo "$bid" | xargs)
             [ -z "$bid" ] && continue
-            git show "origin/swarm/${RUN_TAG}/${bid}:results_${bid}.tsv" > "results_${bid}.tsv" 2>/dev/null || echo "No results_${bid}.tsv on branch"
+            git show "origin/swarm/${RUN_TAG}/${bid}:results/results_${bid}.tsv" > "results/results_${bid}.tsv" 2>/dev/null || git show "origin/swarm/${RUN_TAG}/${bid}:results_${bid}.tsv" > "results/results_${bid}.tsv" 2>/dev/null || echo "No results_${bid}.tsv on branch"
           done
-          ls -la results_*.tsv 2>/dev/null || true
+          ls -la results/results_*.tsv 2>/dev/null || true
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -85,7 +87,7 @@ jobs:
       - name: Run coordinator script
         run: |
           pip install pyyaml -q
-          python3 coordinator_script.py --run_tag "${{ steps.vars.outputs.run_tag }}" --branch_ids $(echo "${{ steps.vars.outputs.branch_ids }}" | tr ',' ' ')
+          python3 agents/coordinator_script.py --run_tag "${{ steps.vars.outputs.run_tag }}" --branch_ids $(echo "${{ steps.vars.outputs.branch_ids }}" | tr ',' ' ')
       - name: Upload coordinator report
         uses: actions/upload-artifact@v4
         with:

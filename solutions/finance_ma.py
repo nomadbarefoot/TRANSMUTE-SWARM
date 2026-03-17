@@ -27,8 +27,8 @@ def _rsi(prices: list[float], period: int) -> list[float]:
 
 
 def compute_signal(prices: list[float]) -> list[int]:
-    short_window = 10
-    long_window = 30
+    short_window = 8
+    long_window = 20
     rsi_period = 14
     rsi_ceiling = 70.0
 

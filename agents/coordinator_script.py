@@ -33,7 +33,7 @@ def main():
     cycle = args.cycle
 
     # 1. Read results TSVs and find best keep commit per branch
-    metric_key = {"sort": "sort_time_ms", "search": "search_time_ms", "filter": "filter_time_ms"}
+    metric_key = {"sort": "sort_time_ms", "search": "search_time_ms", "filter": "filter_time_ms", "finance": "finance_sharpe_neg"}
     best = {}  # branch_id -> (commit, metric_value)
     for bid in branch_ids:
         tsv = results_dir / f"results_{bid}.tsv"

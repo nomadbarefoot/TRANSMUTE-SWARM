@@ -638,6 +638,14 @@ examples:
     # Stage 6: Output & exit
     # -----------------------------------------------------------------------
     print("[transmuter] Stage 6: Output")
+
+    # Auto-scan for stale artifacts after generation
+    try:
+        from agents.calcinator import auto_scan
+        auto_scan(root)
+    except Exception:
+        pass
+
     print("\nGenerated artifacts written. To dispatch:\n")
 
     cog_ids = ",".join(spec.task_id for spec in specs)

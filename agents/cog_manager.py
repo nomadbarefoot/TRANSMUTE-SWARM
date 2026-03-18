@@ -180,6 +180,14 @@ def cmd_create(root: Path, args: argparse.Namespace) -> None:
 
     print(f"\nCogs created: {len(created)}  skipped: {len(skipped)}")
 
+    # Auto-scan for stale artifacts after branch creation
+    if created:
+        try:
+            from agents.calcinator import auto_scan
+            auto_scan(root)
+        except Exception:
+            pass
+
 
 def cmd_list(root: Path, args: argparse.Namespace) -> None:
     run_tag = getattr(args, "run_tag", None)

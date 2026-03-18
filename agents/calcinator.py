@@ -137,7 +137,7 @@ def scan_artifacts(root: Path, run_tag: str | None = None) -> list[dict]:
                 artifacts.append({
                     "category": "orphaned_solution",
                     "path": rel,
-                    "reason": f"not referenced by any task in task_registry.yaml",
+                    "reason": "not referenced by any task in task_registry.yaml",
                     "action": "purge",
                 })
             elif _is_scaffold(sol):

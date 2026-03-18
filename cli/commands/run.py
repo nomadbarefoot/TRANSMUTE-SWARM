@@ -4,7 +4,9 @@ swarm run — wraps the Transmuter pipeline with Rich progress output.
 from __future__ import annotations
 
 import os
+import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 
 import typer
@@ -34,16 +36,45 @@ def _stage(n: int, total: int, label: str, done: bool = False) -> None:
     console.print(f"  {status} [dim]Stage {n}/{total}[/]  [{SECONDARY}]{label}[/]")
 
 
+def _dispatch_cogs(specs: list, run_tag: str, iterations: int, root: Path) -> None:
+    """Run cog_manager create then spawn agent.py per Cog sequentially."""
+    cog_ids = ",".join(s.task_id for s in specs)
+    python = sys.executable
+
+    # Step 1: create branches
+    create_cmd = [
+        python, str(root / "agents" / "cog_manager.py"),
+        "create", "--run_tag", run_tag, "--cog_ids", cog_ids, "--push",
+    ]
+    console.print(f"\n  [dim]$ {' '.join(create_cmd)}[/]")
+    subprocess.run(create_cmd, cwd=str(root))
+
+    # Step 2: spawn agent per Cog
+    for s in specs:
+        agent_cmd = [
+            python, str(root / "agents" / "agent.py"),
+            "--branch_id", s.task_id,
+            "--iterations", str(iterations),
+            "--run_tag", run_tag,
+        ]
+        console.print(f"\n  [dim]$ {' '.join(agent_cmd)}[/]")
+        subprocess.run(agent_cmd, cwd=str(root))
+
+
 def run(
     problem: str = typer.Option(None, "--problem", help="Natural language problem description"),
     spec: Path = typer.Option(None, "--spec", help="Path to spec YAML (bypasses LLM)"),
-    run_tag: str = typer.Option(..., "--run_tag", help="Run tag for this transmutation"),
+    run_tag: str = typer.Option(None, "--run_tag", help="Run tag for this transmutation"),
     auto: bool = typer.Option(False, "--auto", help="Skip human checkpoint"),
+    iterations: int = typer.Option(4, "--iterations", help="Iterations per Cog when dispatching"),
 ) -> None:
     """Decompose a problem into Cog tasks and generate artifacts."""
+    # Interactive prompts for missing required inputs
     if not problem and not spec:
-        error("Provide either --problem or --spec")
-        raise typer.Exit(1)
+        problem = typer.prompt("  Problem description")
+    if not run_tag:
+        default_tag = "tx_" + datetime.now().strftime("%Y%m%d_%H%M")
+        run_tag = typer.prompt("  Run tag", default=default_tag)
 
     # Import transmuter functions (not the CLI main)
     sys.path.insert(0, str(_ROOT))
@@ -190,9 +221,9 @@ def run(
         _stage(5, TOTAL, "confirmed", done=True)
 
     # -----------------------------------------------------------------------
-    # Stage 6: Output & exit
+    # Stage 6: Dispatch
     # -----------------------------------------------------------------------
-    _stage(6, TOTAL, "output")
+    _stage(6, TOTAL, "dispatch")
 
     # Auto-scan for stale artifacts
     try:
@@ -204,23 +235,46 @@ def run(
     cog_ids = ",".join(s.task_id for s in specs)
     branch_ids = " ".join(s.task_id for s in specs)
 
-    dispatch_lines = [
-        f"  [dim]python3 agents/cog_manager.py create --run_tag {run_tag} --cog_ids {cog_ids} --push[/]",
-    ]
-    for s in specs:
+    if auto:
+        # Print commands only — no interactive prompt in auto mode
+        dispatch_lines = [
+            f"  [dim]python3 agents/cog_manager.py create --run_tag {run_tag} --cog_ids {cog_ids} --push[/]",
+        ]
+        for s in specs:
+            dispatch_lines.append(
+                f"  [dim]python3 agents/agent.py --branch_id {s.task_id} --iterations {iterations} --run_tag {run_tag}[/]"
+            )
         dispatch_lines.append(
-            f"  [dim]python3 agents/agent.py --branch_id {s.task_id} --iterations 4 --run_tag {run_tag}[/]"
+            f"  [dim]python3 agents/coordinator_script.py --run_tag {run_tag} --branch_ids {branch_ids}[/]"
         )
-    dispatch_lines.append(
-        f"  [dim]python3 agents/coordinator_script.py --run_tag {run_tag} --branch_ids {branch_ids}[/]"
-    )
+        console.print()
+        console.print(Panel("\n".join(dispatch_lines), title=f"[{SECONDARY}]Dispatch Commands[/]", border_style=DIM))
+        _stage(6, TOTAL, "done (--auto: commands printed, not executed)", done=True)
+        success(f"Run [bold yellow]{run_tag}[/] ready to dispatch.")
+        return
 
-    dispatch_panel = Panel(
-        "\n".join(dispatch_lines),
-        title=f"[{SECONDARY}]Dispatch Commands[/]",
-        border_style=DIM,
-    )
+    # Interactive dispatch
     console.print()
-    console.print(dispatch_panel)
-    _stage(6, TOTAL, "done", done=True)
-    success(f"Run [bold yellow]{run_tag}[/] ready to dispatch.")
+    iterations = typer.prompt("  Iterations per Cog", default=iterations, type=int)
+    dispatch = typer.confirm("  Dispatch Cogs now?", default=True)
+
+    if dispatch:
+        _stage(6, TOTAL, f"dispatching {len(specs)} Cog(s)...")
+        _dispatch_cogs(specs, run_tag, iterations, _ROOT)
+        _stage(6, TOTAL, "done", done=True)
+        success(f"Run [bold yellow]{run_tag}[/] dispatched.")
+    else:
+        dispatch_lines = [
+            f"  [dim]python3 agents/cog_manager.py create --run_tag {run_tag} --cog_ids {cog_ids} --push[/]",
+        ]
+        for s in specs:
+            dispatch_lines.append(
+                f"  [dim]python3 agents/agent.py --branch_id {s.task_id} --iterations {iterations} --run_tag {run_tag}[/]"
+            )
+        dispatch_lines.append(
+            f"  [dim]python3 agents/coordinator_script.py --run_tag {run_tag} --branch_ids {branch_ids}[/]"
+        )
+        console.print()
+        console.print(Panel("\n".join(dispatch_lines), title=f"[{SECONDARY}]Dispatch Commands[/]", border_style=DIM))
+        _stage(6, TOTAL, "done", done=True)
+        success(f"Run [bold yellow]{run_tag}[/] ready to dispatch.")

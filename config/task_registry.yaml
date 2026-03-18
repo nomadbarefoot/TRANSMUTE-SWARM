@@ -1,0 +1,32 @@
+# Task registry — single source of truth for all task configurations.
+# Auto-generated/updated by transmuter.py. Manual edits are fine.
+
+tasks:
+  sort:
+    solution_file: solutions/sort.py
+    metric_name: sort_time_ms
+    metric_direction: lower_is_better
+    oracle_command: python3 oracles/evaluate.py --branch sort --mode {mode}
+    oracle_metric_pattern: '^sort_time_ms:'
+    tsv_header: "commit\tsort_time_ms\tmemory_gb\tstatus\tdescription\tlog"
+  search:
+    solution_file: solutions/search.py
+    metric_name: search_time_ms
+    metric_direction: lower_is_better
+    oracle_command: python3 oracles/evaluate.py --branch search --mode {mode}
+    oracle_metric_pattern: '^search_time_ms:'
+    tsv_header: "commit\tsearch_time_ms\tmemory_gb\tstatus\tdescription\tlog"
+  filter:
+    solution_file: solutions/filter.py
+    metric_name: filter_time_ms
+    metric_direction: lower_is_better
+    oracle_command: python3 oracles/evaluate.py --branch filter --mode {mode}
+    oracle_metric_pattern: '^filter_time_ms:'
+    tsv_header: "commit\tfilter_time_ms\tmemory_gb\tstatus\tdescription\tlog"
+  finance:
+    solution_file: solutions/finance_ma.py
+    metric_name: finance_sharpe_neg
+    metric_direction: lower_is_better
+    oracle_command: python3 oracles/evaluate_finance.py --mode {mode}
+    oracle_metric_pattern: '^finance_sharpe_neg:'
+    tsv_header: "commit\tfinance_sharpe_neg\tmemory_gb\tstatus\tdescription\tlog"

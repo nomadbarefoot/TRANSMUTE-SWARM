@@ -1,4 +1,5 @@
 # Default model config. Overwrite by running: python3 scripts/probe_models.py
 primary: stepfun/step-3.5-flash:free
 fallback: openrouter/hunter-alpha
+transmuter: stepfun/step-3.5-flash:free
 tested_on: ""

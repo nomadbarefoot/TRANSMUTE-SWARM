@@ -69,20 +69,19 @@ case "$mode" in
     ;;
  esac
 
-metric_name=""
-case "$branch" in
-  sort) metric_name="sort_time_ms" ;;
-  search) metric_name="search_time_ms" ;;
-  filter) metric_name="filter_time_ms" ;;
-  finance) metric_name="finance_sharpe_neg" ;;
-  *)
-    echo "Unknown branch: $branch (expected sort, search, filter, or finance)" >&2
-    exit 1
-    ;;
-esac
-
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$repo_root"
+
+# Load task config from registry (dynamic — no hardcoded branch list)
+metric_name=""
+oracle_command=""
+oracle_metric_pattern=""
+if eval "$(python3 scripts/task_config.py "$branch" 2>/dev/null)"; then
+  : # metric_name, oracle_command, oracle_metric_pattern now set
+else
+  echo "Unknown branch: $branch (not found in config/task_registry.yaml)" >&2
+  exit 1
+fi
 
 results_dir="$repo_root/results"
 if [[ -z "$log_dir" ]]; then
@@ -102,17 +101,17 @@ fi
 run_oracle() {
   local oracle_mode="$1"
   local out_file="$2"
-  if [[ "$branch" == "finance" ]]; then
-    python3 oracles/evaluate_finance.py --mode "$oracle_mode" > "$out_file" 2>&1 || return 1
-  else
-    python3 oracles/evaluate.py --branch "$branch" --mode "$oracle_mode" > "$out_file" 2>&1 || return 1
-  fi
+  # Generic oracle invocation from task registry
+  local cmd="${oracle_command//\{mode\}/$oracle_mode}"
+  eval "$cmd" > "$out_file" 2>&1 || return 1
 }
 
 parse_metric() {
   local out_file="$1"
   local line
-  line="$(grep -E "^${metric_name}:" "$out_file" | head -n 1 || true)"
+  # Use oracle_metric_pattern from registry if set, else fall back to metric_name prefix
+  local pattern="${oracle_metric_pattern:-^${metric_name}:}"
+  line="$(grep -E "$pattern" "$out_file" | head -n 1 || true)"
   if [[ -z "$line" ]]; then
     echo ""
   else

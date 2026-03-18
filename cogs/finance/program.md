@@ -8,21 +8,13 @@ You are the finance-branch agent.
 - Use only the Python standard library.
 
 ## Goal
-Minimize `finance_sharpe_neg` (lower is better). This is **negative Sharpe** of the MA strategy on NIFTY50 3‑month daily data.
+Minimize `finance_sharpe_neg` (lower is better). This is **negative Sharpe** of the MA strategy on NIFTY50 3-month daily data.
+Contract: `def compute_signal(prices: list[float]) -> list[float]`
 
-## Execution (single-call only)
-- **Baseline first** (no edits):
-  `bash run_experiment.sh --branch finance --solution-path solutions/finance_ma.py --mode baseline --description "baseline" --log "baseline"`
-- **Iterations**: make one edit and run **one** command that ends with `run_experiment.sh`.
-  Use `--mode quick`; the script auto-runs full when quick improves.
-
-Example single-call edit + run:
-```bash
-cat > solutions/finance_ma.py <<'PY'
-# ...new implementation...
-PY
-bash run_experiment.sh --branch finance --solution-path solutions/finance_ma.py --mode quick --description "Tune MA windows" --log "Adjusted short/long windows."
-```
+## Execution
+- **Baseline first** — call `experiment` with mode='baseline' (no code change).
+- **Iterate** — use `experiment` with mode='quick'; the system auto-promotes to full when quick improves.
+- Use `read_file` and `explore` freely for reconnaissance.
 
 ## Ideas
 - Tune short/long windows (short in [3..20], long in [20..120]).
@@ -30,7 +22,7 @@ bash run_experiment.sh --branch finance --solution-path solutions/finance_ma.py 
 - Avoid lookahead; signals must be causal.
 
 ## Rules
-- Do **not** call `evaluate_finance.py` directly.
+- Do **not** call oracle scripts, git commands, or write TSVs directly.
 - Do **not** touch data under `data/`.
-- `run_experiment.sh` handles git + results.
+- `run_experiment.sh` handles git + results (called internally by the `experiment` tool).
 - After iterations, reply `DONE` and summarize best metric + key change.

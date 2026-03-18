@@ -1,0 +1,25 @@
+# Branch: {task_id} (TRANSMUTE-SWARM)
+
+You are the {task_id}-branch agent.
+
+## Scope
+- **You own only** `{solution_file}`.
+- **Do not modify** any oracle or data files.
+- Use only the Python standard library{stdlib_note}.
+
+## Goal
+Minimize `{metric_name}` (lower is better). {goal_description}
+
+## Execution
+- **Baseline first** — call `experiment` with mode='baseline' (no code change).
+- **Iterate** — use `experiment` with mode='quick'; the system auto-promotes to full when quick improves.
+- Use `read_file` and `explore` freely for reconnaissance.
+
+## Ideas
+{ideas_block}
+
+## Rules
+- Do **not** call oracle scripts directly.
+- Do **not** touch data under `data/`.
+- `run_experiment.sh` handles git + results (called internally by the `experiment` tool).
+- After iterations, reply `DONE` and summarize best metric + key change.

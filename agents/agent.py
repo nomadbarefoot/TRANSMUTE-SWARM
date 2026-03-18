@@ -35,21 +35,57 @@ import yaml
 
 OPENROUTER_BASE = "https://openrouter.ai/api/v1"
 
-# Branch → owned solution file
-BRANCH_SOLUTION_FILES = {
+# ---------------------------------------------------------------------------
+# Task registry (dynamic config from config/task_registry.yaml)
+# ---------------------------------------------------------------------------
+
+# Hardcoded fallbacks — used only if task_registry.yaml is missing
+_FALLBACK_SOLUTION_FILES = {
     "sort": "solutions/sort.py",
     "search": "solutions/search.py",
     "filter": "solutions/filter.py",
-    "finance": "solutions/finance.py",
+    "finance": "solutions/finance_ma.py",
 }
 
-# Branch → metric column name
-BRANCH_METRIC_COLS = {
+_FALLBACK_METRIC_COLS = {
     "sort": "sort_time_ms",
     "search": "search_time_ms",
     "filter": "filter_time_ms",
     "finance": "finance_sharpe_neg",
 }
+
+
+def load_task_registry(root: Path) -> dict:
+    """Load task_registry.yaml, return dict of task_id -> config.
+    Falls back to hardcoded mappings if file not found."""
+    registry_path = root / "config" / "task_registry.yaml"
+    if registry_path.exists():
+        try:
+            with open(registry_path) as f:
+                data = yaml.safe_load(f) or {}
+            return data.get("tasks", {})
+        except Exception:
+            pass
+    return {}
+
+
+def get_solution_file(task_id: str, registry: dict) -> str:
+    """Get solution file path for a task from registry, fallback to hardcoded."""
+    if task_id in registry:
+        return registry[task_id].get("solution_file", _FALLBACK_SOLUTION_FILES.get(task_id, f"solutions/{task_id}.py"))
+    return _FALLBACK_SOLUTION_FILES.get(task_id, f"solutions/{task_id}.py")
+
+
+def get_metric_col(task_id: str, registry: dict) -> str:
+    """Get metric column name for a task from registry, fallback to hardcoded."""
+    if task_id in registry:
+        return registry[task_id].get("metric_name", _FALLBACK_METRIC_COLS.get(task_id, f"{task_id}_metric"))
+    return _FALLBACK_METRIC_COLS.get(task_id, f"{task_id}_metric")
+
+
+def is_known_task(task_id: str, registry: dict) -> bool:
+    """Check if a task_id is valid (in registry or fallback)."""
+    return task_id in registry or task_id in _FALLBACK_SOLUTION_FILES
 
 # Explore tool: allowed command prefixes (case-insensitive match on stripped command)
 EXPLORE_ALLOWED_PREFIXES = (
@@ -325,8 +361,8 @@ def build_state_block(
     max_experiments: int,
     dead_ends: list[str],
     trajectory: list[dict],
+    metric_col: str | None = None,
 ) -> str:
-    metric_col = BRANCH_METRIC_COLS.get(branch_id)
     lines = [f"## Agent State (experiment {experiment_count}/{max_experiments})"]
 
     keep_rows = [r for r in trajectory if r.get("status", "").lower() == "keep"]
@@ -356,11 +392,11 @@ def build_state_block(
     return "\n".join(lines)
 
 
-def build_trajectory_table(trajectory: list[dict], branch_id: str) -> str:
+def build_trajectory_table(trajectory: list[dict], branch_id: str, metric_col: str | None = None) -> str:
     """Build a markdown table of all results so far."""
     if not trajectory:
         return "(no results yet)"
-    metric_col = BRANCH_METRIC_COLS.get(branch_id, "metric")
+    metric_col = metric_col or "metric"
     header = f"| # | {metric_col} | status | description |"
     sep = "|---|---|---|---|"
     rows = [header, sep]
@@ -447,11 +483,16 @@ def main():
     branch_id = cli.branch_id
     max_experiments = cli.iterations
 
-    if branch_id not in BRANCH_SOLUTION_FILES:
-        print(f"ERROR: unknown branch_id '{branch_id}'. Known: {list(BRANCH_SOLUTION_FILES)}", file=sys.stderr)
+    # Load task registry (dynamic config)
+    registry = load_task_registry(root)
+
+    if not is_known_task(branch_id, registry):
+        known = list(registry.keys()) if registry else list(_FALLBACK_SOLUTION_FILES.keys())
+        print(f"ERROR: unknown branch_id '{branch_id}'. Known: {known}", file=sys.stderr)
         sys.exit(1)
 
-    solution_path = BRANCH_SOLUTION_FILES[branch_id]
+    solution_path = get_solution_file(branch_id, registry)
+    metric_col = get_metric_col(branch_id, registry)
     program_path = root / "cogs" / branch_id / "program.md"
     shared_path = root / "discoveries" / "shared_context.md"
 
@@ -524,7 +565,8 @@ def main():
         # --- Build state injection ---
         trajectory = load_trajectory(root, branch_id)
         state_block = build_state_block(
-            branch_id, experiment_count, max_experiments, dead_ends, trajectory
+            branch_id, experiment_count, max_experiments, dead_ends, trajectory,
+            metric_col=metric_col,
         )
 
         # Inject state as a user message (replace any prior state injection)
@@ -532,7 +574,7 @@ def main():
             "role": "user",
             "content": (
                 f"{state_block}\n\n"
-                f"## Your Results So Far\n{build_trajectory_table(trajectory, branch_id)}"
+                f"## Your Results So Far\n{build_trajectory_table(trajectory, branch_id, metric_col=metric_col)}"
             ),
         }
         # Apply sliding window, then append fresh state

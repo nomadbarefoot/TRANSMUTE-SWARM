@@ -33,7 +33,19 @@ def main():
     cycle = args.cycle
 
     # 1. Read results TSVs and find best keep commit per branch
-    metric_key = {"sort": "sort_time_ms", "search": "search_time_ms", "filter": "filter_time_ms", "finance": "finance_sharpe_neg"}
+    # Load metric keys from task registry, fallback to hardcoded
+    _fallback_metric_key = {"sort": "sort_time_ms", "search": "search_time_ms", "filter": "filter_time_ms", "finance": "finance_sharpe_neg"}
+    metric_key = dict(_fallback_metric_key)
+    registry_path = root / "config" / "task_registry.yaml"
+    if registry_path.exists():
+        try:
+            import yaml
+            with open(registry_path) as f:
+                data = yaml.safe_load(f) or {}
+            for tid, tcfg in data.get("tasks", {}).items():
+                metric_key[tid] = tcfg.get("metric_name", f"{tid}_metric")
+        except Exception:
+            pass
     best = {}  # branch_id -> (commit, metric_value)
     for bid in branch_ids:
         tsv = results_dir / f"results_{bid}.tsv"

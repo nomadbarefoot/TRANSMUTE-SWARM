@@ -78,12 +78,30 @@ def branch_age_days(root: Path, branch_name: str, remote: bool = False) -> float
         return None
 
 
+def _load_metric_cols(root: Path) -> dict:
+    """Load metric column names from task registry, fallback to hardcoded."""
+    _fallback = {"sort": "sort_time_ms", "search": "search_time_ms", "filter": "filter_time_ms", "finance": "finance_sharpe_neg"}
+    registry_path = root / "config" / "task_registry.yaml"
+    if registry_path.exists():
+        try:
+            import yaml
+            with open(registry_path) as f:
+                data = yaml.safe_load(f) or {}
+            result = dict(_fallback)
+            for tid, tcfg in data.get("tasks", {}).items():
+                result[tid] = tcfg.get("metric_name", f"{tid}_metric")
+            return result
+        except Exception:
+            pass
+    return _fallback
+
+
 def load_cog_status(root: Path, run_tag: str, cog_ids: list[str]) -> list[dict]:
     """Load best keep result per Cog from results TSVs."""
-    from agents.agent import BRANCH_METRIC_COLS
+    metric_cols = _load_metric_cols(root)
     rows = []
     for cog_id in cog_ids:
-        metric_col = BRANCH_METRIC_COLS.get(cog_id, f"{cog_id}_metric")
+        metric_col = metric_cols.get(cog_id, f"{cog_id}_metric")
         tsv = root / "results" / f"results_{cog_id}.tsv"
         best_metric = None
         best_desc = "-"

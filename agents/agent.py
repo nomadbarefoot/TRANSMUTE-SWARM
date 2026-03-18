@@ -589,6 +589,7 @@ def main():
                 tools=TOOL_DEFS,
                 tool_choice="auto",
                 max_tokens=4096,
+                extra_body={"include_reasoning": False},
             )
         except Exception as exc:
             if current_model == primary:

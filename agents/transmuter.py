@@ -122,8 +122,10 @@ def classify_template_llm(problem_text: str, model: str, client) -> str:
             {"role": "user", "content": problem_text},
         ],
         max_tokens=50,
+        extra_body={"include_reasoning": False},
     )
-    result = (response.choices[0].message.content or "").strip().lower()
+    msg = response.choices[0].message
+    result = (msg.content or getattr(msg, "reasoning", None) or "").strip().lower()
     if result in templates or result == "custom":
         return result
     return "custom"
@@ -229,6 +231,7 @@ def decompose_with_llm(problem_text: str, template: str, model: str, client) -> 
         model=model,
         messages=messages,
         max_tokens=8192,
+        extra_body={"include_reasoning": False},
     )
 
     msg = response.choices[0].message
@@ -241,6 +244,10 @@ def decompose_with_llm(problem_text: str, template: str, model: str, client) -> 
             if args:
                 raw = args
                 break
+
+    # Some reasoning models return content=None with output in reasoning field
+    if not raw:
+        raw = (getattr(msg, "reasoning", None) or "").strip()
 
     if not raw:
         raise ValueError(f"LLM returned empty content. Full response: {response}")

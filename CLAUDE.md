@@ -34,8 +34,30 @@ TRANSMUTE-SWARM is a tiered autonomous research system. The **Transmuter** decom
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r config/requirements.txt
+pip install -e .                           # installs the `swarm` CLI entrypoint
 echo 'OPENROUTER_API_KEY="your-key"' > keys.env
 python scripts/probe_models.py  # run once; writes config/model_config.yaml
+```
+
+## swarm CLI (unified entrypoint)
+
+From project root, use `./swarm` (auto-activates .venv):
+```bash
+./swarm                                           # header + help
+./swarm run --problem "Optimize sorting" --run_tag tx_001   # transmuter NL mode
+./swarm run --spec config/decomp.yaml --run_tag tx_001      # transmuter spec mode
+./swarm run --problem "..." --run_tag tx_001 --auto          # skip checkpoint
+./swarm status --run_tag poc_001                  # per-Cog results table
+./swarm cogs list [--run_tag poc_001]             # list branches
+./swarm cogs cleanup --run_tag poc_001            # delete local branches
+./swarm cogs purge --older-than-days 7            # purge stale branches
+./swarm scan                                      # calcinator dry-run
+./swarm clean [--dry-run]                         # calcinator archive+purge
+```
+
+Or, if venv already active, use `swarm` directly (after `pip install -e .`).
+```bash
+swarm run --problem "..." --run_tag tx_001
 ```
 
 ## Running Experiments

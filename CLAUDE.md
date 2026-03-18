@@ -67,6 +67,16 @@ python agents/cog_manager.py cleanup --run_tag poc_001 --remote --dry-run
 python agents/cog_manager.py purge   --older-than-days 7 --dry-run
 ```
 
+**Calcinator (artifact lifecycle — auto-runs after `cog_manager create`):**
+```bash
+python agents/calcinator.py scan                       # show stale artifacts (dry-run)
+python agents/calcinator.py clean --dry-run            # preview full cleanup
+python agents/calcinator.py clean                      # archive + purge
+python agents/calcinator.py archive --run_tag poc_001  # archive one run's results
+python agents/calcinator.py purge   --dry-run          # preview deletions only
+python agents/calcinator.py flag                       # write manifest, no changes
+```
+
 **Coordinator (after Cogs complete):**
 ```bash
 python agents/coordinator_script.py --run_tag poc_001 --branch_ids sort search filter
@@ -94,7 +104,8 @@ TRANSMUTE-SWARM/
 │   ├── agent.py              # Cog runner (structured tools: experiment/read_file/explore)
 │   ├── cog_manager.py        # Cog branch lifecycle (create/list/status/cleanup/purge)
 │   ├── coordinator_script.py # Deterministic synthesizer
-│   └── transmuter.py         # Problem decomposition & task orchestration pipeline
+│   ├── transmuter.py         # Problem decomposition & task orchestration pipeline
+│   └── calcinator.py         # Artifact lifecycle manager (archive/purge/flag stale artifacts)
 │
 ├── cogs/                     # Cog task definitions (one dir per Cog type)
 │   ├── sort/program.md       # Instructions for the sort Cog
